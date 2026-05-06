@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Color */
+  --bg: #0b0a1e;
+  --surface: #1c1838;
+  --surface-2: #28244c;
+  --border: #4a4578;
+  --text: #f0eeff;
+  --text-dim: #9b93c9;
+  --text-faint: rgba(200, 190, 255, 0.3);
+  --accent: #a855f7;
+  --accent-2: #22d3ee;
+  --ok: #10d98a;
+  --warn: #fbbf24;
+  --blocked: #5a5580;
+  --danger: #f87171;
+  --glow: 0 0 0 3px rgba(168, 85, 247, 0.5), 0 0 20px rgba(168, 85, 247, 0.3);
+
+  /* Spacing (8px grid) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 40px;
+  --space-5: 64px;
+  --space-6: 96px;
+
+  /* Radius */
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 200ms;
+  --dur-med: 350ms;
+  --dur-slow: 500ms;
+
+  /* Focus */
+  --focus-ring: 3px solid var(--accent);
+  --focus-offset: 3px;
+
+  /* Type */
+  --font: 'Nunito', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  background: radial-gradient(ellipse at 28% 18%, #1e1050 0%, #0b0a1e 62%);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 24px;
+  line-height: 1.4;
+  overflow: hidden;
+}
+
+button, input { font-family: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+
+/* Focus — always visible on any focusable element */
+:focus-visible,
+[data-focusable]:focus,
+[data-focusable].focused {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--glow);
+}
+
+/* Tabular numbers for any timer-like content */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, #a855f7 0%, #22d3ee 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Scrollable list — hide scrollbars (TV) */
+.scroll-list { overflow-y: auto; scrollbar-width: none; }
+.scroll-list::-webkit-scrollbar { display: none; }
+
+/* Type scale helpers */
+.t-display { font-size: 56px; font-weight: 900; line-height: 1.1; letter-spacing: -0.5px; }
+.t-h1      { font-size: 40px; font-weight: 800; line-height: 1.2; }
+.t-h2      { font-size: 28px; font-weight: 700; line-height: 1.3; }
+.t-body    { font-size: 24px; font-weight: 600; line-height: 1.4; }
+.t-meta    { font-size: 20px; font-weight: 600; line-height: 1.4; color: var(--text-dim); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
