@@ -77,6 +77,7 @@ export function AccountBadge({ name, avatar, onClick }: AccountBadgeProps) {
   return (
     <button
       data-focusable
+      tabIndex={-1}
       onClick={onClick}
       title={name}
       aria-label={`Signed in as ${name}`}

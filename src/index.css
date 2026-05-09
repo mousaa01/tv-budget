@@ -63,23 +63,31 @@ html, body, #root {
 button, input { font-family: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: none; }
 
-/* Focus — BIG, BRIGHT, OBVIOUS for kids + TV remotes.
-   IMPORTANT: outline + box-shadow only. NO transform/scale here — transforms inflate
-   getBoundingClientRect(), which breaks rect-based spatial navigation. */
+/* Focus — INVERT the button. Dark navy background + white text + bright yellow ring.
+   Impossible to miss against any palette. No transforms (they break rect-based nav). */
 button:focus,
 button:focus-visible,
 a:focus,
-input:focus,
 [data-focusable]:focus,
 [data-focusable].focused {
-  outline: 6px solid #f97316 !important;
+  background: #0f172a !important;       /* deep navy */
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: #fde047 !important;     /* bright yellow */
+  outline: 6px solid #fde047 !important;
   outline-offset: 2px;
   box-shadow:
-    0 0 0 4px #fff,
-    0 0 0 12px #f97316,
-    0 8px 32px 4px rgba(249, 115, 22, 0.6) !important;
+    0 0 0 4px #0f172a,
+    0 0 0 12px #fde047,
+    0 8px 32px 6px rgba(253, 224, 71, 0.65) !important;
 }
-iframe:focus { outline: none !important; box-shadow: none !important; }
+/* Inputs keep their normal look but with the bright ring */
+input:focus, textarea:focus {
+  outline: 6px solid #fde047 !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #0f172a, 0 0 0 12px #fde047 !important;
+}
+iframe:focus { outline: none !important; box-shadow: none !important; background: transparent !important; }
 
 /* Tabular numbers for any timer-like content */
 .tabular { font-variant-numeric: tabular-nums; }

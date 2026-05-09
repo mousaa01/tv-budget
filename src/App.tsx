@@ -57,6 +57,12 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
+  // Auto-close settings whenever route changes — prevents the modal from
+  // bleeding into the player screen (which used to leave half the screen white).
+  useEffect(() => {
+    setSettingsOpen(false);
+  }, [location.pathname]);
+
   // Sign-in gate: no auth yet → show sign-in landing
   if (!auth) {
     return <SignInScreen error={authError} />;

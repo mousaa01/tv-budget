@@ -17,7 +17,11 @@ function isVisible(el: HTMLElement): boolean {
 }
 
 function getFocusables(): HTMLElement[] {
-  return Array.from(document.querySelectorAll<HTMLElement>(FOCUS_SELECTOR)).filter(
+  // If a modal dialog is open, restrict focus to its contents — otherwise arrows
+  // would escape the modal and let the user trigger things they can't see.
+  const modal = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
+  const root: ParentNode = modal ?? document;
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUS_SELECTOR)).filter(
     (el) => isVisible(el) && el.tabIndex !== -1 && !el.hasAttribute('aria-hidden'),
   );
 }
