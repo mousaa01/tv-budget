@@ -139,8 +139,6 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
                   border: '2px solid var(--border)',
                   borderRadius: 'var(--radius-md)',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                  transition: 'transform var(--dur-fast) var(--ease)',
                 }}
               >
                 <img
@@ -211,8 +209,6 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
                     padding: 10,
                     textAlign: 'left',
                     opacity: disabled ? 0.5 : 1,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                    transition: `transform var(--dur-fast) var(--ease)`,
                     cursor: disabled ? 'default' : 'pointer',
                   }}
                 >

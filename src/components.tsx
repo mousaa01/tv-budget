@@ -203,9 +203,7 @@ export function VideoCard({
         border: '2px solid var(--border)',
         borderRadius: 'var(--radius-md)',
         padding: 'var(--space-2)',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
         opacity: disabled ? 0.45 : 1,
-        transition: `transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease)`,
       }}
     >
       <div
@@ -363,10 +361,7 @@ function injectKeyframes() {
     }
     [data-focusable]:focus,
     [data-focusable].focused {
-      transform: scale(1.04);
-      background: var(--surface-2) !important;
       border-color: var(--accent) !important;
-      box-shadow: 0 0 0 3px rgba(249,115,22,0.35) !important;
     }
   `;
   document.head.appendChild(style);

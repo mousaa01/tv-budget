@@ -88,7 +88,6 @@ export function AccountBadge({ name, avatar, onClick }: AccountBadgeProps) {
         background: 'rgba(255,255,255,0.85)',
         border: '2px solid rgba(30,27,75,0.15)',
         borderRadius: 999,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         zIndex: 100,
         cursor: 'pointer',
       }}

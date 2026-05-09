@@ -101,6 +101,8 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
         events: {
           onReady: (e) => {
             try {
+              // Cap quality at 720p — saves bandwidth, faster start on Samsung TV browser
+              try { (e.target as unknown as { setPlaybackQuality?: (q: string) => void }).setPlaybackQuality?.('hd720'); } catch { /* old API ignored */ }
               const data = e.target.getVideoData();
               const duration = knownDuration || e.target.getDuration() || 0;
               pushRecent({
@@ -147,7 +149,11 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
 
-  // Wind-down banners + end-screen mask, polled from currentTime
+  // Wind-down banners + end-screen mask, polled from currentTime.
+  // Use a ref for budgetCtl.remaining so the interval doesn't restart every second.
+  const remainingRef = useRef(budgetCtl.remaining);
+  useEffect(() => { remainingRef.current = budgetCtl.remaining; }, [budgetCtl.remaining]);
+
   useEffect(() => {
     const id = window.setInterval(() => {
       const player = playerRef.current;
@@ -161,17 +167,14 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
         return;
       }
       const remainingInVideo = Math.max(0, duration - current);
-
-      // Mask end screens during last 25s of any video
       setMaskEndScreen(remainingInVideo > 0 && remainingInVideo <= 25);
 
-      // Wind-down banners based on BUDGET remaining (not video remaining)
-      const budgetRemaining = budgetCtl.remaining;
+      const budgetRemaining = remainingRef.current;
       setShowTwoMin(budgetRemaining >= 110 && budgetRemaining <= 130);
       setShowThirtySec(budgetRemaining >= 25 && budgetRemaining <= 35);
-    }, 1000);
+    }, 2000); // 2s instead of 1s — saves CPU on TV
     return () => clearInterval(id);
-  }, [budgetCtl.remaining, knownDuration]);
+  }, [knownDuration]);
 
   // Back key returns home (never to YT end screen)
   useEffect(() => {

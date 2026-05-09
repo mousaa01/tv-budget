@@ -49,7 +49,7 @@
 html, body, #root {
   height: 100%;
   width: 100%;
-  background: linear-gradient(160deg, #dbeafe 0%, #f0fdf4 55%, #fef9c3 100%);
+  background: #f0f9ff;
   color: var(--text);
   font-family: var(--font);
   font-size: 24px;
@@ -60,14 +60,13 @@ html, body, #root {
 button, input { font-family: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: none; }
 
-/* Focus — always visible on any focusable element */
+/* Focus — always visible on any focusable element. NO transform (forces layout on weak GPUs) */
 :focus-visible,
 [data-focusable]:focus,
 [data-focusable].focused {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
   border-radius: var(--radius-sm);
-  box-shadow: var(--glow);
 }
 
 /* Tabular numbers for any timer-like content */
