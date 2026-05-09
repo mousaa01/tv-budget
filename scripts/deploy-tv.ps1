@@ -11,6 +11,16 @@ Set-Location $repo
 
 Write-Host ">>> Signing & packaging tizen/ -> .wgt" -ForegroundColor Cyan
 Get-ChildItem "tizen\*.wgt" -ErrorAction SilentlyContinue | Remove-Item -Force
+
+# Cache-bust: rewrite config.xml's <content src> with a fresh timestamp param so
+# the Samsung TV webview treats it as a new URL (its cache is keyed on full URL).
+$configPath = "tizen\config.xml"
+$stamp = Get-Date -Format "yyyyMMddHHmmss"
+$cfg = Get-Content $configPath -Raw
+$cfg = [regex]::Replace($cfg, '<content src="https://tv-budget\.vercel\.app/[^"]*"', "<content src=`"https://tv-budget.vercel.app/?v=$stamp`"")
+Set-Content -Path $configPath -Value $cfg -NoNewline
+Write-Host "    cache-bust stamp: $stamp" -ForegroundColor DarkGray
+
 tizen package -t wgt -s tvbudget -- tizen
 if ($LASTEXITCODE -ne 0) { throw "package failed" }
 

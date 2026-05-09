@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <widget xmlns:tizen="http://tizen.org/ns/widgets" xmlns="http://www.w3.org/ns/widgets" id="http://mousaa01.github.io/tvbudget" version="1.0.0" viewmodes="maximized">
     <tizen:application id="TVbudget01.TVbudget" package="TVbudget01" required_version="4.0"/>
-    <content src="https://tv-budget.vercel.app/"/>
+    <content src="https://tv-budget.vercel.app/?v=20260509101212"/>
     <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
     <icon src="icon.png"/>
     <name>Adam's Apple</name>
