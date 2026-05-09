@@ -20,6 +20,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
   const [error, setError] = useState<string | null>(null);
   const [fits, setFits] = useState<VideoResult[]>([]);
   const [tooLong, setTooLong] = useState<VideoResult[]>([]);
+  const [subscribedSet, setSubscribedSet] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -27,13 +28,13 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     setError(null);
     const settings = loadSettings();
     const subscribed = loadSubscribedChannels();
-    const allChannelIds = [
-      ...settings.channelAllowlist,
-      ...(subscribed?.channelIds ?? []),
-    ];
+    setSubscribedSet(new Set(subscribed?.channels.map((c) => c.id) ?? []));
 
+    // Only fan-out per channel for the small manual allowlist.
+    // Subscriptions are used for badging only — not filtering — to avoid
+    // burning 1 quota unit per subscribed channel on every search.
     searchVideos(query, {
-      channelIds: allChannelIds.length > 0 ? allChannelIds : undefined,
+      channelIds: settings.channelAllowlist.length > 0 ? settings.channelAllowlist : undefined,
     })
       .then((raw) => {
         if (cancelled) return;
@@ -102,6 +103,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               channel={v.channelTitle}
               durationLabel={formatMMSS(v.durationSeconds)}
               fits
+              isSubscribed={subscribedSet.has(v.channelId)}
               onSelect={() => navigate(`/play/${v.id}?d=${v.durationSeconds}`)}
             />
           ))}
@@ -127,6 +129,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
                   title={v.title}
                   channel={v.channelTitle}
                   durationLabel={formatMMSS(v.durationSeconds)}
+                  isSubscribed={subscribedSet.has(v.channelId)}
                   fits={false}
                   disabled
                   onSelect={() => undefined}

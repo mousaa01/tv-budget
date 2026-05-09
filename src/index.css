@@ -3,21 +3,21 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Color */
-  --bg: #0b0a1e;
-  --surface: #1c1838;
-  --surface-2: #28244c;
-  --border: #4a4578;
-  --text: #f0eeff;
-  --text-dim: #9b93c9;
-  --text-faint: rgba(200, 190, 255, 0.3);
-  --accent: #a855f7;
-  --accent-2: #22d3ee;
-  --ok: #10d98a;
-  --warn: #fbbf24;
-  --blocked: #5a5580;
-  --danger: #f87171;
-  --glow: 0 0 0 3px rgba(168, 85, 247, 0.5), 0 0 20px rgba(168, 85, 247, 0.3);
+  /* Color — bright, sunny, kid-friendly */
+  --bg: #f0f9ff;
+  --surface: #ffffff;
+  --surface-2: #e8f4ff;
+  --border: #bfdbfe;
+  --text: #1e1b4b;
+  --text-dim: #4f46a0;
+  --text-faint: rgba(30, 27, 75, 0.25);
+  --accent: #f97316;
+  --accent-2: #06b6d4;
+  --ok: #16a34a;
+  --warn: #f59e0b;
+  --blocked: #94a3b8;
+  --danger: #ef4444;
+  --glow: 0 0 0 3px rgba(249, 115, 22, 0.45), 0 0 18px rgba(249, 115, 22, 0.25);
 
   /* Spacing (8px grid) */
   --space-1: 8px;
@@ -49,7 +49,7 @@
 html, body, #root {
   height: 100%;
   width: 100%;
-  background: radial-gradient(ellipse at 28% 18%, #1e1050 0%, #0b0a1e 62%);
+  background: linear-gradient(160deg, #dbeafe 0%, #f0fdf4 55%, #fef9c3 100%);
   color: var(--text);
   font-family: var(--font);
   font-size: 24px;
@@ -75,7 +75,7 @@ button { cursor: pointer; background: none; border: none; }
 
 /* Gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, #a855f7 0%, #22d3ee 100%);
+  background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

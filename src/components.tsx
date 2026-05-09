@@ -27,10 +27,10 @@ export function Button({
 
   const palette =
     variant === 'primary'
-      ? { bg: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)', color: '#fff', border: 'transparent', shadow: '0 4px 22px rgba(168,85,247,0.45)' }
+      ? { bg: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: '#fff', border: 'transparent', shadow: '0 4px 22px rgba(249,115,22,0.4)' }
       : variant === 'danger'
       ? { bg: 'transparent', color: 'var(--danger)', border: 'var(--danger)', shadow: 'none' }
-      : { bg: 'transparent', color: 'var(--text)', border: 'var(--accent)', shadow: 'none' };
+      : { bg: 'var(--surface)', color: 'var(--text)', border: 'var(--border)', shadow: '0 2px 8px rgba(0,0,0,0.08)' };
 
   return (
     <button
@@ -70,10 +70,10 @@ export function Pill({ color = 'dim', children }: PillProps) {
   const c =
     color === 'ok' ? 'var(--ok)' : color === 'warn' ? 'var(--warn)' : color === 'blocked' ? 'var(--blocked)' : 'var(--text-dim)';
   const bg =
-    color === 'ok' ? 'rgba(16,217,138,0.13)' :
-    color === 'warn' ? 'rgba(251,191,36,0.13)' :
-    color === 'blocked' ? 'rgba(90,85,128,0.13)' :
-    'rgba(155,147,201,0.08)';
+    color === 'ok' ? 'rgba(22,163,74,0.12)' :
+    color === 'warn' ? 'rgba(245,158,11,0.12)' :
+    color === 'blocked' ? 'rgba(148,163,184,0.12)' :
+    'rgba(30,27,75,0.06)';
   return (
     <span
       style={{
@@ -110,18 +110,18 @@ export function TimerOverlay({ remainingSeconds }: TimerOverlayProps) {
       className="tabular"
       style={{
         position: 'fixed',
-        top: 'var(--space-5)',
-        right: 'var(--space-6)',
+        top: 'var(--space-3)',
+        left: 'var(--space-4)',
         display: 'inline-flex',
         alignItems: 'center',
         gap: 8,
         padding: '8px 20px',
-        background: isWarn ? 'rgba(251,191,36,0.13)' : 'rgba(168,85,247,0.1)',
-        border: `2px solid ${isWarn ? 'rgba(251,191,36,0.45)' : 'rgba(168,85,247,0.28)'}`,
+        background: isWarn ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.7)',
+        border: `2px solid ${isWarn ? 'rgba(245,158,11,0.6)' : 'rgba(30,27,75,0.15)'}`,
         borderRadius: 999,
         fontSize: 24,
         fontWeight: 800,
-        color: isWarn ? 'var(--warn)' : 'var(--text-faint)',
+        color: isWarn ? '#b45309' : 'var(--text-dim)',
         animation: isWarn ? 'pulse 1.5s var(--ease) infinite' : undefined,
         zIndex: 100,
         pointerEvents: 'none',
@@ -173,6 +173,7 @@ interface VideoCardProps {
   channel: string;
   durationLabel: string;
   fits: boolean;
+  isSubscribed?: boolean;
   onSelect: () => void;
   disabled?: boolean;
 }
@@ -183,6 +184,7 @@ export function VideoCard({
   channel,
   durationLabel,
   fits,
+  isSubscribed,
   onSelect,
   disabled,
 }: VideoCardProps) {
@@ -201,6 +203,7 @@ export function VideoCard({
         border: '2px solid var(--border)',
         borderRadius: 'var(--radius-md)',
         padding: 'var(--space-2)',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
         opacity: disabled ? 0.45 : 1,
         transition: `transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease)`,
       }}
@@ -254,7 +257,8 @@ export function VideoCard({
           {title}
         </div>
         <div className="t-meta">{channel}</div>
-        <div style={{ marginTop: 'auto' }}>
+        <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {isSubscribed && <Pill color="ok">★ Subscribed</Pill>}
           <Pill color={fits ? 'ok' : 'blocked'}>
             {fits ? '✓ fits' : '✕ too long for today'}
           </Pill>
@@ -305,7 +309,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--surface-2)',
+          background: 'rgba(255,255,255,0.97)',
           borderRadius: 'var(--radius-lg)',
           padding: 'var(--space-5)',
           maxWidth: 800,
@@ -315,6 +319,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           display: 'flex',
           flexDirection: 'column',
           gap: 'var(--space-3)',
+          boxShadow: '0 8px 48px rgba(0,0,0,0.15)',
         }}
       >
         <h2 className="t-h1">{title}</h2>
@@ -361,6 +366,7 @@ function injectKeyframes() {
       transform: scale(1.04);
       background: var(--surface-2) !important;
       border-color: var(--accent) !important;
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.35) !important;
     }
   `;
   document.head.appendChild(style);

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button, Modal } from './components';
 import { formatHMS } from './format';
-import { buildAuthUrl } from './oauth';
-import { clearSubscribedChannels, loadHistory, loadSettings, loadSubscribedChannels, saveSettings } from './storage';
+import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, isTokenValid } from './oauth';
+import { clearSubscribedChannels, loadHistory, loadSettings, loadSubscribedChannels, saveSettings, saveSubscribedChannels } from './storage';
 import type { Settings, SubscribedChannelsMeta } from './types';
 import type { UseBudget } from './useBudget';
 
@@ -20,6 +20,43 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
   const [blocklistInput, setBlocklistInput] = useState('');
   const [savedToast, setSavedToast] = useState(false);
   const [subscriptions, setSubscriptions] = useState<SubscribedChannelsMeta | null>(() => loadSubscribedChannels());
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const handleRefreshSubscriptions = async () => {
+    const meta = loadSubscribedChannels();
+    if (meta && isTokenValid(meta)) {
+      setSyncing(true);
+      setSyncError(null);
+      try {
+        const [channels, profile] = await Promise.all([
+          fetchSubscribedChannels(meta.accessToken),
+          fetchUserProfile(meta.accessToken),
+        ]);
+        const updated: SubscribedChannelsMeta = {
+          ...meta,
+          channels,
+          profile: profile ?? meta.profile,
+          syncedAt: new Date().toISOString(),
+        };
+        saveSubscribedChannels(updated);
+        setSubscriptions(updated);
+        setSavedToast(true);
+        window.setTimeout(() => setSavedToast(false), 1500);
+        if (channels.length === 0) {
+          setSyncError('YouTube returned 0 channels. Subscriptions may be private in your account settings.');
+        }
+      } catch (err) {
+        console.error('Sub refresh failed:', err);
+        setSyncError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setSyncing(false);
+      }
+    } else {
+      // Token expired or missing — need Google login
+      window.location.href = buildAuthUrl();
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -189,13 +226,15 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
             {subscriptions ? (
               <>
                 <div className="t-body" style={{ color: 'var(--ok)', marginTop: 'var(--space-2)' }}>
-                  ✓ Connected — {subscriptions.channelIds.length} subscribed channels imported
+                  ✓ Connected — {subscriptions.channels.length} subscribed channels imported
                 </div>
                 <div className="t-meta" style={{ marginTop: 4 }}>
                   Last synced: {new Date(subscriptions.syncedAt).toLocaleDateString()}
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
-                  <Button onClick={() => { window.location.href = buildAuthUrl(); }}>Refresh subscriptions</Button>
+                  <Button onClick={handleRefreshSubscriptions} disabled={syncing}>
+                    {syncing ? 'Syncing…' : 'Refresh subscriptions'}
+                  </Button>
                   <Button
                     variant="danger"
                     onClick={() => { clearSubscribedChannels(); setSubscriptions(null); }}
@@ -203,6 +242,11 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
                     Disconnect
                   </Button>
                 </div>
+                {syncError && (
+                  <div className="t-meta" style={{ color: 'var(--danger)', marginTop: 'var(--space-2)' }}>
+                    ⚠ {syncError}
+                  </div>
+                )}
               </>
             ) : (
               <>

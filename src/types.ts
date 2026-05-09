@@ -2,6 +2,7 @@ export interface VideoResult {
   id: string;
   title: string;
   channelTitle: string;
+  channelId: string;
   thumbnail: string;
   durationSeconds: number;
 }
@@ -31,7 +32,21 @@ export interface Settings {
   coolDownEnabled: boolean;
 }
 
+export interface SubscribedChannel {
+  id: string;
+  title: string;
+  thumbnail: string;
+}
+
+export interface UserProfile {
+  name: string;
+  avatar: string;
+}
+
 export interface SubscribedChannelsMeta {
-  channelIds: string[];
+  channels: SubscribedChannel[];
   syncedAt: string; // ISO timestamp
+  accessToken: string;
+  tokenExpiresAt: number; // unix ms
+  profile?: UserProfile;
 }

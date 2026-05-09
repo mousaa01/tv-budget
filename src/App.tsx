@@ -2,46 +2,78 @@ import { useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { TimerOverlay } from './components';
 import { HomeScreen } from './HomeScreen';
-import { fetchSubscribedChannels, parseTokenFromHash } from './oauth';
+import { fetchSubscribedChannels, fetchUserProfile, parseTokenFromHash } from './oauth';
 import { PlayerScreen } from './PlayerScreen';
-import { saveSubscribedChannels } from './storage';
+import { loadSubscribedChannels, saveSubscribedChannels } from './storage';
 import { SearchScreen } from './SearchScreen';
 import { SettingsModal } from './SettingsModal';
+import { SignInScreen, AccountBadge } from './SignInScreen';
 import { TimesUpScreen } from './TimesUpScreen';
+import type { SubscribedChannelsMeta } from './types';
 import { useBudget } from './useBudget';
 
 export default function App() {
   const budgetCtl = useBudget();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [auth, setAuth] = useState<SubscribedChannelsMeta | null>(() => loadSubscribedChannels());
+  const [authError, setAuthError] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
   // Handle OAuth implicit-grant redirect: Google appends #access_token=... to the URL.
   useEffect(() => {
-    const token = parseTokenFromHash(window.location.hash);
-    if (!token) return;
+    const parsed = parseTokenFromHash(window.location.hash);
+    if (!parsed) return;
     // Clear the hash immediately so the token isn't visible in the URL bar.
     navigate('/', { replace: true });
-    fetchSubscribedChannels(token)
-      .then((channelIds) => {
-        saveSubscribedChannels({ channelIds, syncedAt: new Date().toISOString() });
-        // Open settings so the user can see the result.
-        setSettingsOpen(true);
-      })
-      .catch((err: unknown) => {
-        console.error('Failed to fetch subscriptions:', err);
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  // Hide the always-on timer on the player screen — the player draws its own
-  // (same position, but rendered above the video).
+    (async () => {
+      try {
+        const [channels, profile] = await Promise.all([
+          fetchSubscribedChannels(parsed.token),
+          fetchUserProfile(parsed.token),
+        ]);
+        const meta: SubscribedChannelsMeta = {
+          channels,
+          syncedAt: new Date().toISOString(),
+          accessToken: parsed.token,
+          tokenExpiresAt: parsed.expiresAt,
+          profile: profile ?? undefined,
+        };
+        saveSubscribedChannels(meta);
+        setAuth(meta);
+        if (channels.length === 0) {
+          setAuthError(
+            "Signed in, but YouTube returned 0 subscribed channels. Your subscriptions may be set to private in your YouTube account settings.",
+          );
+        } else {
+          setAuthError(null);
+        }
+      } catch (err) {
+        console.error('OAuth fetch failed:', err);
+        setAuthError(err instanceof Error ? err.message : String(err));
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
+
+  // Sign-in gate: no auth yet → show sign-in landing
+  if (!auth) {
+    return <SignInScreen error={authError} />;
+  }
+
   const onPlayer = location.pathname.startsWith('/play/');
 
   return (
     <>
-      {!onPlayer && <TimerOverlay remainingSeconds={budgetCtl.remaining} />}
-      {onPlayer && <TimerOverlay remainingSeconds={budgetCtl.remaining} />}
+      <TimerOverlay remainingSeconds={budgetCtl.remaining} />
+      {!onPlayer && (
+        <AccountBadge
+          name={auth.profile?.name ?? 'Signed in'}
+          avatar={auth.profile?.avatar ?? ''}
+          onClick={() => setSettingsOpen(true)}
+        />
+      )}
 
       <Routes>
         <Route
@@ -60,7 +92,11 @@ export default function App() {
 
       <SettingsModal
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={() => {
+          setSettingsOpen(false);
+          // Refresh auth state from storage in case user disconnected
+          setAuth(loadSubscribedChannels());
+        }}
         budgetCtl={budgetCtl}
       />
     </>

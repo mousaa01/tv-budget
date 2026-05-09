@@ -15,7 +15,7 @@ export function todayStr(): string {
 
 const DEFAULT_SETTINGS: Settings = {
   pin: '1234',
-  dailyLimitMinutes: 60,
+  dailyLimitMinutes: 30,
   blocklistKeywords: [],
   channelAllowlist: [],
   coolDownEnabled: false,
@@ -38,7 +38,12 @@ export function saveSettings(s: Settings): void {
 export function loadSubscribedChannels(): SubscribedChannelsMeta | null {
   try {
     const raw = localStorage.getItem(KEYS.subscriptions);
-    return raw ? (JSON.parse(raw) as SubscribedChannelsMeta) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SubscribedChannelsMeta> & { channelIds?: string[] };
+    // Reject old shape (pre-channel-info) — force a re-sync
+    if (!Array.isArray(parsed.channels)) return null;
+    if (typeof parsed.accessToken !== 'string') return null;
+    return parsed as SubscribedChannelsMeta;
   } catch {
     return null;
   }

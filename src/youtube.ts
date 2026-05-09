@@ -14,6 +14,7 @@ interface SearchListItem {
   snippet: {
     title: string;
     channelTitle: string;
+    channelId: string;
     thumbnails: { medium?: { url: string }; high?: { url: string }; default: { url: string } };
   };
 }
@@ -100,6 +101,7 @@ async function hydrateDurations(
       id: i.id.videoId,
       title: i.snippet.title,
       channelTitle: i.snippet.channelTitle,
+      channelId: i.snippet.channelId,
       thumbnail:
         i.snippet.thumbnails.medium?.url ??
         i.snippet.thumbnails.high?.url ??
