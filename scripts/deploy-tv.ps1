@@ -35,18 +35,24 @@ if ($wgt.Name -ne $safeName) {
   $wgt = Get-Item $newPath
 }
 
-$device = (sdb devices | Select-String 'device\s+\S+$' | ForEach-Object { ($_ -split '\s+')[-1] } | Select-Object -First 1)
+$device = (sdb devices | Select-String 'device\s+\S+$' | ForEach-Object {
+  $line = $_.ToString()
+  $parts = $line -split '\s+'
+  # Prefer real TV (UN... model) over emulator (T-samsung-...)
+  [PSCustomObject]@{ Serial = $parts[0]; Model = $parts[-1] }
+} | Sort-Object @{Expression={ if ($_.Model -like 'T-samsung-*') {1} else {0} }} | Select-Object -First 1)
 if (-not $device) {
   Write-Host "No TV connected. Run: sdb connect <TV-IP>:26101" -ForegroundColor Yellow
   exit 1
 }
-Write-Host ">>> Installing $($wgt.Name) on $device" -ForegroundColor Cyan
-tizen install -n $wgt.FullName -t $device
+$deviceTarget = $device.Model
+Write-Host ">>> Installing $($wgt.Name) on $deviceTarget" -ForegroundColor Cyan
+tizen install -n $wgt.FullName -t $deviceTarget
 if ($LASTEXITCODE -ne 0) { throw "install failed" }
 
 # Kill any running instance, then launch fresh so the new code actually runs.
 Write-Host ">>> Killing & relaunching app on TV" -ForegroundColor Cyan
-sdb -s $device shell 0 was_kill TVbudget01.TVbudget 2>$null | Out-Null
+sdb -s $device.Serial shell 0 was_kill TVbudget01.TVbudget 2>$null | Out-Null
 Start-Sleep -Milliseconds 500
-sdb -s $device shell 0 was_execute TVbudget01.TVbudget 2>$null | Out-Null
+sdb -s $device.Serial shell 0 was_execute TVbudget01.TVbudget 2>$null | Out-Null
 Write-Host "    relaunched." -ForegroundColor DarkGray
