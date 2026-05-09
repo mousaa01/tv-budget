@@ -4,7 +4,7 @@
     <content src="https://tv-budget.vercel.app/"/>
     <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
     <icon src="icon.png"/>
-    <name>TVBudget</name>
+    <name>Adam's Apple</name>
     <tizen:profile name="tv"/>
     <access origin="*" subdomains="true"/>
     <tizen:allow-navigation>* https://tv-budget.vercel.app https://accounts.google.com https://www.googleapis.com https://www.youtube.com https://www.youtube-nocookie.com</tizen:allow-navigation>

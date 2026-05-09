@@ -1,7 +1,6 @@
 // Spatial focus navigation for D-pad remote.
 // Arrow Up/Down moves between focusable elements (`[data-focusable]` or focusable form controls).
 // Inside text inputs, Up/Down also escapes the input (Left/Right still moves the caret).
-// Left/Right inside horizontal scroll-lists works via native focus order — we just nudge.
 
 const FOCUS_SELECTOR = [
   '[data-focusable]:not([disabled])',
@@ -10,12 +9,16 @@ const FOCUS_SELECTOR = [
   'a[href]',
 ].join(',');
 
+function isVisible(el: HTMLElement): boolean {
+  if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') return false;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return false;
+  return true;
+}
+
 function getFocusables(): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>(FOCUS_SELECTOR)).filter(
-    (el) =>
-      el.offsetParent !== null &&
-      !el.hasAttribute('aria-hidden') &&
-      el.tabIndex !== -1,
+    (el) => isVisible(el) && el.tabIndex !== -1 && !el.hasAttribute('aria-hidden'),
   );
 }
 
@@ -24,14 +27,21 @@ function center(el: Element): { x: number; y: number } {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
+function focusEl(el: HTMLElement) {
+  el.focus({ preventScroll: false });
+  el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+}
+
 /**
  * Move focus in a direction. For Up/Down we pick the closest focusable whose
  * vertical center is on the requested side, biased toward small horizontal distance.
- * For Left/Right we do the same horizontally.
+ * Fallback: if no candidate is found in the requested direction, wrap to the topmost
+ * (down → first below; if none, first above) focusable so the user is never stranded.
  */
 function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
   const active = (document.activeElement as HTMLElement | null) ?? document.body;
-  const candidates = getFocusables().filter((el) => el !== active);
+  const all = getFocusables();
+  const candidates = all.filter((el) => el !== active);
   if (candidates.length === 0) return;
   const a = center(active);
 
@@ -65,17 +75,26 @@ function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
         secondary = Math.abs(dy);
         break;
     }
-    // weight perpendicular distance more lightly so we prefer same-row/column targets
     const score = primary + secondary * 0.5;
     if (score < bestScore) {
       bestScore = score;
       best = el;
     }
   }
-  if (best) {
-    best.focus();
-    best.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+  // Fallback: nothing in the requested direction — jump to the next focusable in DOM order
+  // (down/right → next, up/left → previous). Beats stranding the user with no visible focus.
+  if (!best) {
+    const idx = all.indexOf(active);
+    if (idx === -1) {
+      best = all[0] ?? null;
+    } else {
+      const forward = direction === 'down' || direction === 'right';
+      best = forward ? all[Math.min(idx + 1, all.length - 1)] : all[Math.max(idx - 1, 0)];
+    }
   }
+
+  if (best && best !== active) focusEl(best);
 }
 
 let installed = false;
@@ -94,7 +113,6 @@ export function installSpatialNavigation() {
         (tgt.type === 'text' || tgt.type === 'search' || tgt.type === '');
       const isTextArea = tgt instanceof HTMLTextAreaElement;
 
-      // Inside text inputs, only intercept Up/Down (preserve Left/Right caret movement).
       if (isTextInput || isTextArea) {
         if (e.key === 'ArrowUp') {
           e.preventDefault();
@@ -125,6 +143,6 @@ export function installSpatialNavigation() {
           break;
       }
     },
-    true, // capture phase so we beat default browser behavior on TV
+    true,
   );
 }

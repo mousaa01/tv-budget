@@ -52,9 +52,8 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
     >
       <header>
         <h1 className="t-display gradient-text">
-          <span className="wiggle" style={{ display: 'inline-block', marginRight: 8 }}>🎉</span>
-          TV Budget
-          <span style={{ marginLeft: 8 }}>🌈</span>
+          <span className="wiggle" style={{ display: 'inline-block', marginRight: 8 }}>�</span>
+          Adam's Apple
         </h1>
         <p className="t-h2" style={{ color: 'var(--text-dim)', marginTop: 'var(--space-2)' }}>
           {budgetCtl.noNewVideos
@@ -80,11 +79,7 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
             borderRadius: 'var(--radius-md)',
             color: 'var(--text)',
             fontSize: 32,
-            outline: 'none',
-            transition: 'border-color var(--dur-fast) var(--ease)',
           }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
-          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
         />
       </form>
 
