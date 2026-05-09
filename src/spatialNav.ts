@@ -101,6 +101,7 @@ function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
 }
 
 let installed = false;
+let lastMoveAt = 0;
 export function installSpatialNavigation() {
   if (installed) return;
   installed = true;
@@ -110,6 +111,20 @@ export function installSpatialNavigation() {
       // Don't interfere with the YouTube player iframe — it has its own controls.
       const tgt = e.target as HTMLElement | null;
       if (tgt?.tagName === 'IFRAME') return;
+
+      // Many TV remotes / OS layers fire keydown twice per press, which makes the
+      // selection skip every other item. Throttle directional moves.
+      const isArrow =
+        e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+        e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+      if (isArrow) {
+        const now = performance.now();
+        if (now - lastMoveAt < 180) {
+          e.preventDefault();
+          return;
+        }
+        lastMoveAt = now;
+      }
 
       const isTextInput =
         tgt instanceof HTMLInputElement &&
