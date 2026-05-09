@@ -9,15 +9,26 @@ $env:Path = "$env:TIZEN_TOOLS\ide\bin;$env:TIZEN_TOOLS;$env:Path"
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
 
-Write-Host ">>> Signing & packaging tizen/ -> TVBudget.wgt" -ForegroundColor Cyan
-Remove-Item "tizen\TVBudget.wgt" -ErrorAction SilentlyContinue
+Write-Host ">>> Signing & packaging tizen/ -> .wgt" -ForegroundColor Cyan
+Get-ChildItem "tizen\*.wgt" -ErrorAction SilentlyContinue | Remove-Item -Force
 tizen package -t wgt -s tvbudget -- tizen
 if ($LASTEXITCODE -ne 0) { throw "package failed" }
+
+$wgt = Get-ChildItem "tizen\*.wgt" | Select-Object -First 1
+if (-not $wgt) { throw "No .wgt produced" }
+
+# Rename to a space-free name; Tizen install fails with spaces in the filename.
+$safeName = "AdamsApple.wgt"
+if ($wgt.Name -ne $safeName) {
+  $newPath = Join-Path $wgt.DirectoryName $safeName
+  Move-Item -Force $wgt.FullName $newPath
+  $wgt = Get-Item $newPath
+}
 
 $device = (sdb devices | Select-String 'device\s+\S+$' | ForEach-Object { ($_ -split '\s+')[-1] } | Select-Object -First 1)
 if (-not $device) {
   Write-Host "No TV connected. Run: sdb connect <TV-IP>:26101" -ForegroundColor Yellow
   exit 1
 }
-Write-Host ">>> Installing on $device" -ForegroundColor Cyan
-tizen install -n tizen/TVBudget.wgt -t $device
+Write-Host ">>> Installing $($wgt.Name) on $device" -ForegroundColor Cyan
+tizen install -n $wgt.FullName -t $device
