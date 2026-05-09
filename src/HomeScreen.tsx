@@ -109,10 +109,13 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onBlur={() => setSearching(false)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 e.preventDefault();
+                setSearching(false);
+              } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                // Spatial nav will move focus away; collapse the search input too
+                // so the search button reappears.
                 setSearching(false);
               }
             }}

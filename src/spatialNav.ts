@@ -22,16 +22,20 @@ function getFocusables(): HTMLElement[] {
   );
 }
 
+function center(el: Element): { x: number; y: number } {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
 function focusEl(el: HTMLElement) {
   el.focus({ preventScroll: false });
   el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
 }
 
 /**
- * Move focus in a direction. For Up/Down we pick the closest focusable whose
- * vertical center is on the requested side, biased toward small horizontal distance.
- * Fallback: if no candidate is found in the requested direction, wrap to the topmost
- * (down → first below; if none, first above) focusable so the user is never stranded.
+ * Center-based spatial nav. For each direction, candidates must have their center
+ * past the active center on the primary axis. Score = primary-axis distance + 2x
+ * perpendicular distance, so we prefer items roughly aligned with the current one.
  */
 function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
   const all = getFocusables();
@@ -41,7 +45,6 @@ function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
   const active =
     activeRaw && activeRaw !== document.body && all.includes(activeRaw) ? activeRaw : null;
 
-  // No focus yet — just focus the first thing so the user is never stuck.
   if (!active) {
     focusEl(all[0]);
     return;
@@ -49,50 +52,46 @@ function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
 
   const candidates = all.filter((el) => el !== active);
   if (candidates.length === 0) return;
-  const ar = active.getBoundingClientRect();
+  const a = center(active);
 
-  function pick(requireOverlap: boolean): HTMLElement | null {
-    let best: HTMLElement | null = null;
-    let bestScore = Infinity;
-    for (const el of candidates) {
-      const r = el.getBoundingClientRect();
-      let primary = 0;
-      let perpGap = 0;
-      switch (direction) {
-        case 'up':
-          if (r.bottom > ar.top - 1) continue;
-          primary = ar.top - r.bottom;
-          perpGap = Math.max(0, r.left - ar.right, ar.left - r.right);
-          break;
-        case 'down':
-          if (r.top < ar.bottom + 1) continue;
-          primary = r.top - ar.bottom;
-          perpGap = Math.max(0, r.left - ar.right, ar.left - r.right);
-          break;
-        case 'left':
-          if (r.right > ar.left - 1) continue;
-          primary = ar.left - r.right;
-          perpGap = Math.max(0, r.top - ar.bottom, ar.top - r.bottom);
-          break;
-        case 'right':
-          if (r.left < ar.right + 1) continue;
-          primary = r.left - ar.right;
-          perpGap = Math.max(0, r.top - ar.bottom, ar.top - r.bottom);
-          break;
-      }
-      if (requireOverlap && perpGap > 0) continue;
-      const score = primary + perpGap * 4;
-      if (score < bestScore) {
-        bestScore = score;
-        best = el;
-      }
+  let best: HTMLElement | null = null;
+  let bestScore = Infinity;
+  for (const el of candidates) {
+    const c = center(el);
+    const dx = c.x - a.x;
+    const dy = c.y - a.y;
+    let primary = 0;
+    let perp = 0;
+    switch (direction) {
+      case 'up':
+        if (dy >= -8) continue;
+        primary = -dy;
+        perp = Math.abs(dx);
+        break;
+      case 'down':
+        if (dy <= 8) continue;
+        primary = dy;
+        perp = Math.abs(dx);
+        break;
+      case 'left':
+        if (dx >= -8) continue;
+        primary = -dx;
+        perp = Math.abs(dy);
+        break;
+      case 'right':
+        if (dx <= 8) continue;
+        primary = dx;
+        perp = Math.abs(dy);
+        break;
     }
-    return best;
+    const score = primary + perp * 2;
+    if (score < bestScore) {
+      bestScore = score;
+      best = el;
+    }
   }
 
-  let best = pick(true) ?? pick(false);
-
-  // Final fallback: nothing in that direction — step in DOM order so we never strand.
+  // DOM-order fallback so the user is never stranded.
   if (!best) {
     const idx = all.indexOf(active);
     const forward = direction === 'down' || direction === 'right';

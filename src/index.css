@@ -64,23 +64,22 @@ button, input { font-family: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: none; }
 
 /* Focus — BIG, BRIGHT, OBVIOUS for kids + TV remotes.
-   Outline + shadow + slight scale. Never modify position/z-index/background here. */
+   IMPORTANT: outline + box-shadow only. NO transform/scale here — transforms inflate
+   getBoundingClientRect(), which breaks rect-based spatial navigation. */
 button:focus,
 button:focus-visible,
 a:focus,
 input:focus,
 [data-focusable]:focus,
 [data-focusable].focused {
-  outline: 8px solid #f97316 !important;
+  outline: 6px solid #f97316 !important;
   outline-offset: 2px;
   box-shadow:
     0 0 0 4px #fff,
-    0 0 0 14px #f97316,
-    0 12px 40px 6px rgba(249, 115, 22, 0.7) !important;
-  transform: scale(1.06);
-  transition: transform 120ms var(--ease);
+    0 0 0 12px #f97316,
+    0 8px 32px 4px rgba(249, 115, 22, 0.6) !important;
 }
-iframe:focus { outline: none !important; box-shadow: none !important; transform: none !important; }
+iframe:focus { outline: none !important; box-shadow: none !important; }
 
 /* Tabular numbers for any timer-like content */
 .tabular { font-variant-numeric: tabular-nums; }
