@@ -107,6 +107,7 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
                 id: data.video_id,
                 title: data.title,
                 channelTitle: data.author,
+                channelId: '',
                 thumbnail: `https://i.ytimg.com/vi/${data.video_id}/mqdefault.jpg`,
                 durationSeconds: duration,
                 watchedAt: Date.now(),
