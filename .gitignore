@@ -19,3 +19,8 @@ dist-ssr/
 # OS
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
+tizen/TVBudget.wgt
+tizen/.buildResult/
+tizen/sig*.xml
+tizen/author-signature.xml
