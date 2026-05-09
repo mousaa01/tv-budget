@@ -19,8 +19,8 @@ export function SignInScreen({ error }: SignInScreenProps) {
         textAlign: 'center',
       }}
     >
-      <h1 className="t-display gradient-text">
-        <span className="wiggle" style={{ display: 'inline-block', marginRight: 8 }}>�</span>
+      <h1 className="t-display" style={{ color: 'var(--accent)' }}>
+        <span className="wiggle" style={{ display: 'inline-block', marginRight: 12 }}>🍎</span>
         Adam's Apple
       </h1>
       <p className="t-h2" style={{ color: 'var(--text-dim)', maxWidth: 700 }}>

@@ -22,7 +22,8 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
     setRecent(loadRecent());
     const meta = loadSubscribedChannels();
     setChannels(meta?.channels ?? []);
-    inputRef.current?.focus();
+    // NOTE: do NOT auto-focus the search input — on TV that opens the on-screen
+    // keyboard. Focus stays on whatever the spatial nav picks first.
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -50,26 +51,33 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
         gap: 'var(--space-4)',
       }}
     >
-      <header>
-        <h1 className="t-display gradient-text">
-          <span className="wiggle" style={{ display: 'inline-block', marginRight: 8 }}>�</span>
-          Adam's Apple
-        </h1>
-        <p className="t-h2" style={{ color: 'var(--text-dim)', marginTop: 'var(--space-2)' }}>
-          {budgetCtl.noNewVideos
-            ? "🎈 You're all done for today — come back tomorrow!"
-            : `⏰ ${remainingLabel} of fun left today!`}
-        </p>
+      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 className="t-display" style={{ color: 'var(--accent)' }}>
+            <span className="wiggle" style={{ display: 'inline-block', marginRight: 8 }}>🍎</span>
+            Adam's Apple
+          </h1>
+          <p className="t-h2" style={{ color: 'var(--text-dim)', marginTop: 'var(--space-2)' }}>
+            {budgetCtl.noNewVideos
+              ? "🎈 You're all done for today — come back tomorrow!"
+              : `⏰ ${remainingLabel} of fun left today!`}
+          </p>
+        </div>
+        <Button variant="secondary" onClick={onOpenSettings} style={{ flexShrink: 0 }}>
+          ⚙ Settings
+        </Button>
       </header>
 
-      <form onSubmit={onSubmit} style={{ width: '100%', maxWidth: 1400 }}>
-        <input
-          ref={inputRef}
+      <form
+        onSubmit={onSubmit}
+        style={{ width: '100%', maxWidth: 1400, position: 'relative' }}
+      >
+        {/* Visible "button" the spatial nav can land on without opening the IME.
+            Pressing Enter focuses the real input (which then opens the keyboard). */}
+        <button
+          type="button"
           data-focusable
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="What do you want to watch?"
-          aria-label="Search videos"
+          onClick={() => inputRef.current?.focus()}
           style={{
             width: '100%',
             height: 96,
@@ -77,8 +85,56 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
             background: 'var(--surface)',
             border: '3px solid var(--border)',
             borderRadius: 'var(--radius-md)',
+            color: query ? 'var(--text)' : 'var(--text-dim)',
+            fontSize: 32,
+            fontWeight: 700,
+            textAlign: 'left',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <span style={{ fontSize: 36 }}>🔍</span>
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {query || 'What do you want to watch?'}
+          </span>
+        </button>
+        {/* The real input — hidden until focused. tabIndex=-1 keeps spatial nav off it. */}
+        <input
+          ref={inputRef}
+          tabIndex={-1}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onBlur={() => { /* keep value; user pressed Back/Done */ }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              inputRef.current?.blur();
+            }
+          }}
+          aria-label="Search videos"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: 96,
+            padding: '0 var(--space-3) 0 60px',
+            background: 'var(--surface)',
+            border: '3px solid var(--accent)',
+            borderRadius: 'var(--radius-md)',
             color: 'var(--text)',
             fontSize: 32,
+            // Hide the input until it has focus so we don't show duplicate UI
+            opacity: 0,
+            pointerEvents: 'none',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.pointerEvents = 'auto';
+          }}
+          onBlurCapture={(e) => {
+            e.currentTarget.style.opacity = '0';
+            e.currentTarget.style.pointerEvents = 'none';
           }}
         />
       </form>

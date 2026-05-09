@@ -22,11 +22,6 @@ function getFocusables(): HTMLElement[] {
   );
 }
 
-function center(el: Element): { x: number; y: number } {
-  const r = el.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-}
-
 function focusEl(el: HTMLElement) {
   el.focus({ preventScroll: false });
   el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
@@ -43,44 +38,52 @@ function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
   const all = getFocusables();
   const candidates = all.filter((el) => el !== active);
   if (candidates.length === 0) return;
-  const a = center(active);
+  const ar = active.getBoundingClientRect();
 
-  let best: HTMLElement | null = null;
-  let bestScore = Infinity;
-  for (const el of candidates) {
-    const c = center(el);
-    const dx = c.x - a.x;
-    const dy = c.y - a.y;
-    let primary = 0;
-    let secondary = 0;
-    switch (direction) {
-      case 'up':
-        if (dy >= -2) continue;
-        primary = -dy;
-        secondary = Math.abs(dx);
-        break;
-      case 'down':
-        if (dy <= 2) continue;
-        primary = dy;
-        secondary = Math.abs(dx);
-        break;
-      case 'left':
-        if (dx >= -2) continue;
-        primary = -dx;
-        secondary = Math.abs(dy);
-        break;
-      case 'right':
-        if (dx <= 2) continue;
-        primary = dx;
-        secondary = Math.abs(dy);
-        break;
+  // Two-pass: first pass requires perpendicular-axis OVERLAP with the active rect
+  // (so Down from a channel card lands on whatever is directly below). Second pass
+  // falls back to nearest by perpendicular distance.
+  function pick(requireOverlap: boolean): HTMLElement | null {
+    let best: HTMLElement | null = null;
+    let bestScore = Infinity;
+    for (const el of candidates) {
+      const r = el.getBoundingClientRect();
+      let primary = 0; // forward gap along movement axis
+      let perpGap = 0; // 0 if rects overlap on perp axis, else gap distance
+      switch (direction) {
+        case 'up':
+          if (r.bottom > ar.top - 1) continue;
+          primary = ar.top - r.bottom;
+          perpGap = Math.max(0, r.left - ar.right, ar.left - r.right);
+          break;
+        case 'down':
+          if (r.top < ar.bottom + 1) continue;
+          primary = r.top - ar.bottom;
+          perpGap = Math.max(0, r.left - ar.right, ar.left - r.right);
+          break;
+        case 'left':
+          if (r.right > ar.left - 1) continue;
+          primary = ar.left - r.right;
+          perpGap = Math.max(0, r.top - ar.bottom, ar.top - r.bottom);
+          break;
+        case 'right':
+          if (r.left < ar.right + 1) continue;
+          primary = r.left - ar.right;
+          perpGap = Math.max(0, r.top - ar.bottom, ar.top - r.bottom);
+          break;
+      }
+      if (requireOverlap && perpGap > 0) continue;
+      // Penalise perpendicular distance heavily so we don't jump diagonally.
+      const score = primary + perpGap * 4;
+      if (score < bestScore) {
+        bestScore = score;
+        best = el;
+      }
     }
-    const score = primary + secondary * 0.5;
-    if (score < bestScore) {
-      bestScore = score;
-      best = el;
-    }
+    return best;
   }
+
+  let best = pick(true) ?? pick(false);
 
   // Fallback: nothing in the requested direction — jump to the next focusable in DOM order
   // (down/right → next, up/left → previous). Beats stranding the user with no visible focus.

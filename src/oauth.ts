@@ -23,6 +23,7 @@ export function buildAuthUrl(): string {
     response_type: 'token',
     scope: SCOPE,
     include_granted_scopes: 'true',
+    prompt: 'select_account',
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }

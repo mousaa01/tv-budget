@@ -44,7 +44,6 @@ for (let y = 0; y < H; y++) {
     const g = Math.round(40 + t * 10);
     const b = Math.round(50 + t * 5);
     px(x, y, r, g, b, 255);
-    if (highlight(x, y)) px(x, y, 255, 210, 210, 255);
   }
 }
 

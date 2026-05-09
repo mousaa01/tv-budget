@@ -68,9 +68,14 @@ button { cursor: pointer; background: none; border: none; }
 :focus-visible,
 [data-focusable]:focus,
 [data-focusable].focused {
-  outline: 5px solid #f97316 !important;
+  outline: 6px solid #f97316 !important;
   outline-offset: 4px;
-  border-radius: var(--radius-sm);
+  box-shadow:
+    0 0 0 10px rgba(249, 115, 22, 0.35),
+    0 0 32px 8px rgba(249, 115, 22, 0.55) !important;
+  background-color: #fff3c4 !important;
+  z-index: 5;
+  position: relative;
 }
 
 /* Tabular numbers for any timer-like content */

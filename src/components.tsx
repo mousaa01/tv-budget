@@ -362,6 +362,7 @@ function injectKeyframes() {
     [data-focusable]:focus,
     [data-focusable].focused {
       border-color: var(--accent) !important;
+      filter: brightness(1.05) saturate(1.1);
     }
   `;
   document.head.appendChild(style);
