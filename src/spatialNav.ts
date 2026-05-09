@@ -32,7 +32,12 @@ function center(el: Element): { x: number; y: number } {
 }
 
 function focusEl(el: HTMLElement) {
+  // Remove .focused from every previously-highlighted element.
+  // We can't rely on :focus alone because Tizen's WebKit sometimes doesn't
+  // fire the :focus pseudo-class for elements focused via JS .focus().
+  document.querySelectorAll<HTMLElement>('.focused').forEach((e) => e.classList.remove('focused'));
   el.focus({ preventScroll: false });
+  el.classList.add('focused');
   el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
 }
 

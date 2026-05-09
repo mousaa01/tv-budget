@@ -202,7 +202,8 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
         background: '#000',
       }}
     >
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {/* className="yt-fill" — CSS forces the YT-injected wrapper div + iframe to cover the container */}
+      <div ref={containerRef} className="yt-fill" style={{ position: 'absolute', inset: 0 }} />
 
       {/* End-screen mask: blocks bottom-right area where YouTube end cards appear */}
       {maskEndScreen && (

@@ -89,6 +89,17 @@ input:focus, textarea:focus {
 }
 iframe:focus { outline: none !important; box-shadow: none !important; background: transparent !important; }
 
+/* Force the YouTube IFrame API's injected wrapper div + iframe to fill the container.
+   YT API inserts: containerRef > div#player > iframe
+   Without this, the intermediate div has no height and the iframe collapses to top-left. */
+.yt-fill > div,
+.yt-fill iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* Tabular numbers for any timer-like content */
 .tabular { font-variant-numeric: tabular-nums; }
 
