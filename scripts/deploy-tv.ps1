@@ -42,3 +42,11 @@ if (-not $device) {
 }
 Write-Host ">>> Installing $($wgt.Name) on $device" -ForegroundColor Cyan
 tizen install -n $wgt.FullName -t $device
+if ($LASTEXITCODE -ne 0) { throw "install failed" }
+
+# Kill any running instance, then launch fresh so the new code actually runs.
+Write-Host ">>> Killing & relaunching app on TV" -ForegroundColor Cyan
+sdb -s $device shell 0 was_kill TVbudget01.TVbudget 2>$null | Out-Null
+Start-Sleep -Milliseconds 500
+sdb -s $device shell 0 was_execute TVbudget01.TVbudget 2>$null | Out-Null
+Write-Host "    relaunched." -ForegroundColor DarkGray

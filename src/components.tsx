@@ -359,11 +359,7 @@ function injectKeyframes() {
       from { opacity: 0; transform: scale(0.96); }
       to   { opacity: 1; transform: scale(1); }
     }
-    [data-focusable]:focus,
-    [data-focusable].focused {
-      border-color: var(--accent) !important;
-      filter: brightness(1.05) saturate(1.1);
-    }
+    /* Focus styling lives in index.css — do not duplicate here. */
   `;
   document.head.appendChild(style);
 }
