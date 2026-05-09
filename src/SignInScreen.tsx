@@ -19,7 +19,11 @@ export function SignInScreen({ error }: SignInScreenProps) {
         textAlign: 'center',
       }}
     >
-      <h1 className="t-display gradient-text">📺 TV Budget</h1>
+      <h1 className="t-display gradient-text">
+        <span className="wiggle" style={{ display: 'inline-block', marginRight: 8 }}>🎉</span>
+        TV Budget
+        <span style={{ marginLeft: 8 }}>🌈</span>
+      </h1>
       <p className="t-h2" style={{ color: 'var(--text-dim)', maxWidth: 700 }}>
         Sign in with your YouTube account to get started!
       </p>

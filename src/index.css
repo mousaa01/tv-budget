@@ -3,17 +3,20 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Color — bright, sunny, kid-friendly */
-  --bg: #f0f9ff;
+  /* Color — bright, sunny, kid-friendly. Bumped saturation across the board. */
+  --bg: #fff7ed;
   --surface: #ffffff;
-  --surface-2: #e8f4ff;
-  --border: #bfdbfe;
+  --surface-2: #ffedd5;
+  --border: #fdba74;
   --text: #1e1b4b;
-  --text-dim: #4f46a0;
-  --text-faint: rgba(30, 27, 75, 0.25);
-  --accent: #f97316;
-  --accent-2: #06b6d4;
-  --ok: #16a34a;
+  --text-dim: #6d28d9;
+  --text-faint: rgba(30, 27, 75, 0.3);
+  --accent: #f97316;       /* orange */
+  --accent-2: #ec4899;     /* hot pink */
+  --accent-3: #8b5cf6;     /* violet */
+  --accent-4: #06b6d4;     /* cyan */
+  --accent-5: #facc15;     /* sunny yellow */
+  --ok: #22c55e;
   --warn: #f59e0b;
   --blocked: #94a3b8;
   --danger: #ef4444;
@@ -49,7 +52,7 @@
 html, body, #root {
   height: 100%;
   width: 100%;
-  background: #f0f9ff;
+  background: #fff7ed;
   color: var(--text);
   font-family: var(--font);
   font-size: 24px;
@@ -72,12 +75,32 @@ button { cursor: pointer; background: none; border: none; }
 /* Tabular numbers for any timer-like content */
 .tabular { font-variant-numeric: tabular-nums; }
 
-/* Gradient text utility */
+/* Rainbow gradient text — fun, kid friendly, no animation cost (gradient is static) */
 .gradient-text {
-  background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+  background: linear-gradient(
+    90deg,
+    #ef4444 0%,
+    #f97316 18%,
+    #facc15 36%,
+    #22c55e 54%,
+    #06b6d4 72%,
+    #8b5cf6 90%,
+    #ec4899 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Bouncy attention-grab for the title — used sparingly */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+.wiggle {
+  display: inline-block;
+  animation: wiggle 1.4s var(--ease) infinite;
+  transform-origin: 50% 50%;
 }
 
 /* Scrollable list — hide scrollbars (TV) */

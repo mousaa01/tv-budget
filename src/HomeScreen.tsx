@@ -51,11 +51,15 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
       }}
     >
       <header>
-        <h1 className="t-display gradient-text">📺 TV Budget</h1>
+        <h1 className="t-display gradient-text">
+          <span className="wiggle" style={{ display: 'inline-block', marginRight: 8 }}>🎉</span>
+          TV Budget
+          <span style={{ marginLeft: 8 }}>🌈</span>
+        </h1>
         <p className="t-h2" style={{ color: 'var(--text-dim)', marginTop: 'var(--space-2)' }}>
           {budgetCtl.noNewVideos
-            ? "You're all done for today — come back tomorrow!"
-            : `${remainingLabel} left today`}
+            ? "🎈 You're all done for today — come back tomorrow!"
+            : `⏰ ${remainingLabel} of fun left today!`}
         </p>
       </header>
 
@@ -86,8 +90,8 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
 
       {/* Subscribed channels row — always shown if signed in */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        <h2 className="t-h2" style={{ color: 'var(--accent-2)' }}>
-          ★ Your channels {channels.length > 0 && `(${channels.length})`}
+        <h2 className="t-h2" style={{ color: 'var(--accent-3)' }}>
+          ⭐ Your channels {channels.length > 0 && `(${channels.length})`}
         </h2>
         {channels.length === 0 ? (
           <div
@@ -176,7 +180,7 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
       </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        <h2 className="t-h2" style={{ color: 'var(--accent)' }}>▶ Recently watched</h2>
+        <h2 className="t-h2" style={{ color: 'var(--accent)' }}>▶ Recently watched 🎥</h2>
         {recent.length === 0 ? (
           <div className="t-meta">Search for something to watch above ☝</div>
         ) : (
