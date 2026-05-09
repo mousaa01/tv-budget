@@ -64,23 +64,23 @@ button, input { font-family: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: none; }
 
 /* Focus — BIG, BRIGHT, OBVIOUS for kids + TV remotes.
-   IMPORTANT: only outline + box-shadow. Do NOT change position/z-index/background
-   here, otherwise focused iframes/modals will collapse or hide content. */
+   Outline + shadow + slight scale. Never modify position/z-index/background here. */
 button:focus,
 button:focus-visible,
 a:focus,
 input:focus,
 [data-focusable]:focus,
 [data-focusable].focused {
-  outline: 6px solid #f97316 !important;
-  outline-offset: 4px;
+  outline: 8px solid #f97316 !important;
+  outline-offset: 2px;
   box-shadow:
-    0 0 0 10px rgba(249, 115, 22, 0.35),
-    0 0 32px 8px rgba(249, 115, 22, 0.55) !important;
+    0 0 0 4px #fff,
+    0 0 0 14px #f97316,
+    0 12px 40px 6px rgba(249, 115, 22, 0.7) !important;
+  transform: scale(1.06);
+  transition: transform 120ms var(--ease);
 }
-/* Never visually highlight an iframe — the YouTube player iframe gets focus when
-   it loads, and any background tint or transform would hide the video. */
-iframe:focus { outline: none !important; box-shadow: none !important; }
+iframe:focus { outline: none !important; box-shadow: none !important; transform: none !important; }
 
 /* Tabular numbers for any timer-like content */
 .tabular { font-variant-numeric: tabular-nums; }

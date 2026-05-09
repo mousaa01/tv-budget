@@ -14,6 +14,7 @@ interface HomeProps {
 export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
   const [recent, setRecent] = useState<RecentVideo[]>([]);
   const [channels, setChannels] = useState<SubscribedChannel[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,18 +69,19 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
         </Button>
       </header>
 
-      <form
-        onSubmit={onSubmit}
-        style={{ width: '100%', maxWidth: 1400, position: 'relative' }}
-      >
-        {/* Visible "button" the spatial nav can land on without opening the IME.
-            Pressing Enter focuses the real input (which then opens the keyboard). */}
+      {/* Search row.
+          IMPORTANT: when searching=false there is NO <input> in the DOM, so the
+          on-screen keyboard cannot open from arrow-key navigation. Pressing OK
+          on the search button sets searching=true which mounts the input and
+          autofocuses it. Esc / submit closes it again. */}
+      {!searching ? (
         <button
           type="button"
           data-focusable
-          onClick={() => inputRef.current?.focus()}
+          onClick={() => setSearching(true)}
           style={{
             width: '100%',
+            maxWidth: 1400,
             height: 96,
             padding: '0 var(--space-3)',
             background: 'var(--surface)',
@@ -100,44 +102,35 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
             {query || 'What do you want to watch?'}
           </span>
         </button>
-        {/* The real input — hidden until focused. tabIndex=-1 keeps spatial nav off it. */}
-        <input
-          ref={inputRef}
-          tabIndex={-1}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onBlur={() => { /* keep value; user pressed Back/Done */ }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              inputRef.current?.blur();
-            }
-          }}
-          aria-label="Search videos"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: 96,
-            padding: '0 var(--space-3) 0 60px',
-            background: 'var(--surface)',
-            border: '3px solid var(--accent)',
-            borderRadius: 'var(--radius-md)',
-            color: 'var(--text)',
-            fontSize: 32,
-            // Hide the input until it has focus so we don't show duplicate UI
-            opacity: 0,
-            pointerEvents: 'none',
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.opacity = '1';
-            e.currentTarget.style.pointerEvents = 'auto';
-          }}
-          onBlurCapture={(e) => {
-            e.currentTarget.style.opacity = '0';
-            e.currentTarget.style.pointerEvents = 'none';
-          }}
-        />
-      </form>
+      ) : (
+        <form onSubmit={onSubmit} style={{ width: '100%', maxWidth: 1400 }}>
+          <input
+            ref={inputRef}
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onBlur={() => setSearching(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                setSearching(false);
+              }
+            }}
+            placeholder="What do you want to watch?"
+            aria-label="Search videos"
+            style={{
+              width: '100%',
+              height: 96,
+              padding: '0 var(--space-3)',
+              background: 'var(--surface)',
+              border: '3px solid var(--accent)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--text)',
+              fontSize: 32,
+            }}
+          />
+        </form>
+      )}
 
       {/* Subscribed channels row — always shown if signed in */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>

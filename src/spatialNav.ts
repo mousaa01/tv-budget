@@ -34,22 +34,30 @@ function focusEl(el: HTMLElement) {
  * (down → first below; if none, first above) focusable so the user is never stranded.
  */
 function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
-  const active = (document.activeElement as HTMLElement | null) ?? document.body;
   const all = getFocusables();
+  if (all.length === 0) return;
+
+  const activeRaw = document.activeElement as HTMLElement | null;
+  const active =
+    activeRaw && activeRaw !== document.body && all.includes(activeRaw) ? activeRaw : null;
+
+  // No focus yet — just focus the first thing so the user is never stuck.
+  if (!active) {
+    focusEl(all[0]);
+    return;
+  }
+
   const candidates = all.filter((el) => el !== active);
   if (candidates.length === 0) return;
   const ar = active.getBoundingClientRect();
 
-  // Two-pass: first pass requires perpendicular-axis OVERLAP with the active rect
-  // (so Down from a channel card lands on whatever is directly below). Second pass
-  // falls back to nearest by perpendicular distance.
   function pick(requireOverlap: boolean): HTMLElement | null {
     let best: HTMLElement | null = null;
     let bestScore = Infinity;
     for (const el of candidates) {
       const r = el.getBoundingClientRect();
-      let primary = 0; // forward gap along movement axis
-      let perpGap = 0; // 0 if rects overlap on perp axis, else gap distance
+      let primary = 0;
+      let perpGap = 0;
       switch (direction) {
         case 'up':
           if (r.bottom > ar.top - 1) continue;
@@ -73,7 +81,6 @@ function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
           break;
       }
       if (requireOverlap && perpGap > 0) continue;
-      // Penalise perpendicular distance heavily so we don't jump diagonally.
       const score = primary + perpGap * 4;
       if (score < bestScore) {
         bestScore = score;
@@ -85,16 +92,11 @@ function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
 
   let best = pick(true) ?? pick(false);
 
-  // Fallback: nothing in the requested direction — jump to the next focusable in DOM order
-  // (down/right → next, up/left → previous). Beats stranding the user with no visible focus.
+  // Final fallback: nothing in that direction — step in DOM order so we never strand.
   if (!best) {
     const idx = all.indexOf(active);
-    if (idx === -1) {
-      best = all[0] ?? null;
-    } else {
-      const forward = direction === 'down' || direction === 'right';
-      best = forward ? all[Math.min(idx + 1, all.length - 1)] : all[Math.max(idx - 1, 0)];
-    }
+    const forward = direction === 'down' || direction === 'right';
+    best = forward ? all[Math.min(idx + 1, all.length - 1)] : all[Math.max(idx - 1, 0)];
   }
 
   if (best && best !== active) focusEl(best);
