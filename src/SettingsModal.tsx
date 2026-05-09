@@ -115,7 +115,7 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
         <>
           <p className="t-body">Enter parent PIN.</p>
           <input
-            tabIndex={-1}
+            data-focusable
             type="password"
             inputMode="numeric"
             value={pinTry}
@@ -138,14 +138,7 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
           {pinError && <div style={{ color: 'var(--danger)' }}>{pinError}</div>}
           <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button autoFocus onClick={() => {
-              const pinInput = document.querySelector<HTMLInputElement>('input[aria-label="PIN"]');
-              if (pinInput && document.activeElement !== pinInput) {
-                pinInput.focus();
-              } else {
-                tryPin();
-              }
-            }}>Enter PIN</Button>
+            <Button onClick={tryPin}>Unlock</Button>
           </div>
         </>
       ) : (

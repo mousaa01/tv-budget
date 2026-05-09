@@ -46,13 +46,24 @@ if (-not $device) {
   exit 1
 }
 $deviceTarget = $device.Model
+Write-Host ">>> Clearing WebApp cache on TV" -ForegroundColor Cyan
+# Clear the webview disk cache for this app so Tizen can't serve stale JS/CSS.
+sdb -s $device.Serial shell "rm -rf /opt/usr/apps/TVbudget01.TVbudget/data/WebApp 2>/dev/null; rm -rf /opt/usr/home/owner/.webkit/cache 2>/dev/null; echo done" 2>$null | Out-Null
+Write-Host "    cache cleared." -ForegroundColor DarkGray
+
 Write-Host ">>> Installing $($wgt.Name) on $deviceTarget" -ForegroundColor Cyan
 tizen install -n $wgt.FullName -t $deviceTarget
 if ($LASTEXITCODE -ne 0) { throw "install failed" }
 
-# Kill any running instance, then launch fresh so the new code actually runs.
 Write-Host ">>> Killing & relaunching app on TV" -ForegroundColor Cyan
-sdb -s $device.Serial shell 0 was_kill TVbudget01.TVbudget 2>$null | Out-Null
-Start-Sleep -Milliseconds 500
-sdb -s $device.Serial shell 0 was_execute TVbudget01.TVbudget 2>$null | Out-Null
-Write-Host "    relaunched." -ForegroundColor DarkGray
+try {
+  # Use tizen run (official CLI) to launch the app cleanly after install.
+  tizen run -p TVbudget01.TVbudget -t $deviceTarget 2>&1 | Out-Null
+  Write-Host "    launched via tizen run." -ForegroundColor DarkGray
+} catch {
+  # Fallback to SDB shell commands if tizen run not supported
+  sdb -s $device.Serial shell 0 was_kill TVbudget01.TVbudget 2>$null | Out-Null
+  Start-Sleep -Milliseconds 800
+  sdb -s $device.Serial shell 0 was_execute TVbudget01.TVbudget 2>$null | Out-Null
+  Write-Host "    launched via sdb shell." -ForegroundColor DarkGray
+}
