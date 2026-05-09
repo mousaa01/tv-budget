@@ -47,9 +47,13 @@ if (-not $device) {
 }
 $deviceTarget = $device.Model
 Write-Host ">>> Clearing WebApp cache on TV" -ForegroundColor Cyan
-# Clear the webview disk cache for this app so Tizen can't serve stale JS/CSS.
-sdb -s $device.Serial shell "rm -rf /opt/usr/apps/TVbudget01.TVbudget/data/WebApp 2>/dev/null; rm -rf /opt/usr/home/owner/.webkit/cache 2>/dev/null; echo done" 2>$null | Out-Null
-Write-Host "    cache cleared." -ForegroundColor DarkGray
+# Clear the webview disk cache. Suppress errors — this may fail if the dir doesn't exist.
+$ErrorActionPreference = 'Continue'
+sdb -s $device.Serial shell rm -rf /opt/usr/apps/TVbudget01.TVbudget/data/WebApp 2>$null | Out-Null
+$ErrorActionPreference = 'Stop'
+Write-Host "    cache cleared (or did not exist)." -ForegroundColor DarkGray
+# Reconnect in case sdb shell closed the connection.
+sdb connect $($device.Serial) 2>$null | Out-Null
 
 Write-Host ">>> Installing $($wgt.Name) on $deviceTarget" -ForegroundColor Cyan
 tizen install -n $wgt.FullName -t $deviceTarget
