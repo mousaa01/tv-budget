@@ -1,3 +1,4 @@
+import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, LoadingDots } from './components';
@@ -5,6 +6,130 @@ import { formatMMSS, formatHMS } from './format';
 import { loadRecent, loadSubscribedChannels } from './storage';
 import type { RecentVideo, SubscribedChannel } from './types';
 import type { UseBudget } from './useBudget';
+
+// ----------- Focusable sub-components for inline buttons -----------
+
+function SearchPlaceholder({ query, onPress }: { query: string; onPress: () => void }) {
+  const { ref, focused } = useFocusable({ onEnterPress: onPress });
+  return (
+    <button
+      ref={ref as React.Ref<HTMLButtonElement>}
+      type="button"
+      data-focusable
+      className={focused ? 'focused' : undefined}
+      onClick={onPress}
+      style={{
+        width: '100%',
+        maxWidth: 1400,
+        height: 96,
+        padding: '0 var(--space-3)',
+        background: 'var(--surface)',
+        border: '3px solid var(--border)',
+        borderRadius: 'var(--radius-md)',
+        color: query ? 'var(--text)' : 'var(--text-dim)',
+        fontSize: 32,
+        fontWeight: 700,
+        textAlign: 'left',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}
+    >
+      <span style={{ fontSize: 36 }}>🔍</span>
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {query || 'What do you want to watch?'}
+      </span>
+    </button>
+  );
+}
+
+function ChannelButton({ channel, onPress }: { channel: SubscribedChannel; onPress: () => void }) {
+  const { ref, focused } = useFocusable({ onEnterPress: onPress });
+  return (
+    <button
+      ref={ref as React.Ref<HTMLButtonElement>}
+      data-focusable
+      className={focused ? 'focused' : undefined}
+      onClick={onPress}
+      title={channel.title}
+      style={{
+        flex: '0 0 140px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 8,
+        padding: 12,
+        background: 'var(--surface)',
+        border: '2px solid var(--border)',
+        borderRadius: 'var(--radius-md)',
+        cursor: 'pointer',
+      }}
+    >
+      <img
+        src={channel.thumbnail}
+        alt=""
+        loading="lazy"
+        style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface-2)' }}
+      />
+      <div style={{
+        fontSize: 15, fontWeight: 700, color: 'var(--text)', textAlign: 'center',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+        overflow: 'hidden', lineHeight: 1.2, minHeight: 36,
+      }}>
+        {channel.title}
+      </div>
+    </button>
+  );
+}
+
+function RecentButton({ video, disabled, onPress }: { video: RecentVideo; disabled: boolean; onPress: () => void }) {
+  const { ref, focused } = useFocusable({ onEnterPress: disabled ? undefined : onPress });
+  return (
+    <button
+      ref={disabled ? undefined : (ref as React.Ref<HTMLButtonElement>)}
+      data-focusable={!disabled || undefined}
+      className={focused && !disabled ? 'focused' : undefined}
+      disabled={disabled}
+      onClick={onPress}
+      style={{
+        flex: '0 0 260px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        background: 'var(--surface)',
+        border: '2px solid var(--border)',
+        borderRadius: 'var(--radius-md)',
+        padding: 10,
+        textAlign: 'left',
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? 'default' : 'pointer',
+      }}
+    >
+      <div style={{
+        width: '100%', aspectRatio: '16/9', borderRadius: 'var(--radius-sm)',
+        overflow: 'hidden', background: 'var(--surface-2)', position: 'relative', flexShrink: 0,
+      }}>
+        <img src={video.thumbnail} alt="" loading="lazy"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <span className="tabular" style={{
+          position: 'absolute', right: 6, bottom: 6,
+          background: 'rgba(0,0,0,0.72)', color: '#fff',
+          fontSize: 16, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+        }}>
+          {formatMMSS(video.durationSeconds)}
+        </span>
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {video.title}
+      </div>
+      <div style={{ fontSize: 16, color: 'var(--text-dim)', fontWeight: 600 }}>
+        {video.channelTitle}
+      </div>
+    </button>
+  );
+}
 
 interface HomeProps {
   budgetCtl: UseBudget;
@@ -75,33 +200,7 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
           on the search button sets searching=true which mounts the input and
           autofocuses it. Esc / submit closes it again. */}
       {!searching ? (
-        <button
-          type="button"
-          data-focusable
-          onClick={() => setSearching(true)}
-          style={{
-            width: '100%',
-            maxWidth: 1400,
-            height: 96,
-            padding: '0 var(--space-3)',
-            background: 'var(--surface)',
-            border: '3px solid var(--border)',
-            borderRadius: 'var(--radius-md)',
-            color: query ? 'var(--text)' : 'var(--text-dim)',
-            fontSize: 32,
-            fontWeight: 700,
-            textAlign: 'left',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <span style={{ fontSize: 36 }}>🔍</span>
-          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {query || 'What do you want to watch?'}
-          </span>
-        </button>
+        <SearchPlaceholder query={query} onPress={() => setSearching(true)} />
       ) : (
         <form onSubmit={onSubmit} style={{ width: '100%', maxWidth: 1400 }}>
           <input
@@ -174,53 +273,11 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
             }}
           >
             {channels.map((c) => (
-              <button
+              <ChannelButton
                 key={c.id}
-                data-focusable
-                onClick={() => navigate(`/search?q=${encodeURIComponent(c.title)}`)}
-                title={c.title}
-                style={{
-                  flex: '0 0 140px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: 12,
-                  background: 'var(--surface)',
-                  border: '2px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                }}
-              >
-                <img
-                  src={c.thumbnail}
-                  alt=""
-                  loading="lazy"
-                  style={{
-                    width: 88,
-                    height: 88,
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    background: 'var(--surface-2)',
-                  }}
-                />
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: 'var(--text)',
-                    textAlign: 'center',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    lineHeight: 1.2,
-                    minHeight: 36,
-                  }}
-                >
-                  {c.title}
-                </div>
-              </button>
+                channel={c}
+                onPress={() => navigate(`/search?q=${encodeURIComponent(c.title)}`)}
+              />
             ))}
           </div>
         )}
@@ -244,59 +301,12 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
             {recent.map((r) => {
               const disabled = r.durationSeconds > budgetCtl.remaining;
               return (
-                <button
+                <RecentButton
                   key={r.id}
-                  data-focusable={!disabled || undefined}
+                  video={r}
                   disabled={disabled}
-                  onClick={() => navigate(`/play/${r.id}?d=${r.durationSeconds}`)}
-                  style={{
-                    flex: '0 0 260px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
-                    background: 'var(--surface)',
-                    border: '2px solid var(--border)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: 10,
-                    textAlign: 'left',
-                    opacity: disabled ? 0.5 : 1,
-                    cursor: disabled ? 'default' : 'pointer',
-                  }}
-                >
-                  <div style={{
-                    width: '100%',
-                    aspectRatio: '16/9',
-                    borderRadius: 'var(--radius-sm)',
-                    overflow: 'hidden',
-                    background: 'var(--surface-2)',
-                    position: 'relative',
-                    flexShrink: 0,
-                  }}>
-                    <img
-                      src={r.thumbnail}
-                      alt=""
-                      loading="lazy"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    />
-                    <span className="tabular" style={{
-                      position: 'absolute', right: 6, bottom: 6,
-                      background: 'rgba(0,0,0,0.72)', color: '#fff',
-                      fontSize: 16, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
-                    }}>
-                      {formatMMSS(r.durationSeconds)}
-                    </span>
-                  </div>
-                  <div style={{
-                    fontSize: 18, fontWeight: 700, color: 'var(--text)',
-                    display: '-webkit-box', WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                  }}>
-                    {r.title}
-                  </div>
-                  <div style={{ fontSize: 16, color: 'var(--text-dim)', fontWeight: 600 }}>
-                    {r.channelTitle}
-                  </div>
-                </button>
+                  onPress={() => navigate(`/play/${r.id}?d=${r.durationSeconds}`)}
+                />
               );
             })}
           </div>

@@ -1,6 +1,13 @@
-# Build, sign, and install the .wgt on the connected Samsung TV.
+# Build, sign, and install the .wgt on the connected Samsung TV or Tizen Emulator.
 # Requires: Tizen VS Code extension installed; Samsung certificate profile named "tvbudget";
 # TV connected via sdb (run once: sdb connect <TV-IP>:26101).
+# Usage:
+#   scripts/deploy-tv.ps1              -> targets real TV (model UN...)
+#   scripts/deploy-tv.ps1 -Target emulator -> targets Tizen emulator (T-samsung-*)
+
+param(
+  [string]$Target = "tv"   # "tv" | "emulator"
+)
 
 $ErrorActionPreference = 'Stop'
 $env:TIZEN_TOOLS = "$env:USERPROFILE\.tizen-extension-platform\server\sdktools\data\tools"
@@ -38,11 +45,20 @@ if ($wgt.Name -ne $safeName) {
 $device = (sdb devices | Select-String 'device\s+\S+$' | ForEach-Object {
   $line = $_.ToString()
   $parts = $line -split '\s+'
-  # Prefer real TV (UN... model) over emulator (T-samsung-...)
   [PSCustomObject]@{ Serial = $parts[0]; Model = $parts[-1] }
-} | Sort-Object @{Expression={ if ($_.Model -like 'T-samsung-*') {1} else {0} }} | Select-Object -First 1)
+} | Where-Object {
+  if ($Target -eq "emulator") {
+    $_.Model -like 'T-samsung-*'
+  } else {
+    $_.Model -notlike 'T-samsung-*'
+  }
+} | Select-Object -First 1)
 if (-not $device) {
-  Write-Host "No TV connected. Run: sdb connect <TV-IP>:26101" -ForegroundColor Yellow
+  if ($Target -eq "emulator") {
+    Write-Host "No Tizen emulator connected. Open Tizen Studio -> Emulator Manager, launch a TV emulator, then run: sdb connect 127.0.0.1:26101" -ForegroundColor Yellow
+  } else {
+    Write-Host "No TV connected. Run: sdb connect <TV-IP>:26101" -ForegroundColor Yellow
+  }
   exit 1
 }
 $deviceTarget = $device.Model

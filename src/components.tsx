@@ -1,5 +1,6 @@
+import { FocusContext, setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import type { ReactNode, ButtonHTMLAttributes } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { formatHMS, formatMMSS } from './format';
 
 /* ---------------- Button ---------------- */
@@ -18,11 +19,18 @@ export function Button({
   autoFocus,
   style,
   children,
+  onClick,
   ...rest
 }: ButtonProps) {
-  const ref = useRef<HTMLButtonElement>(null);
+  const { ref, focused } = useFocusable({
+    // TV remote OK/Enter press — trigger the real DOM click so onClick fires normally.
+    onEnterPress: () => (ref.current as HTMLButtonElement | null)?.click(),
+    focusKey: rest.id,
+  });
+
+  // autoFocus: move LRUD focus here on mount (e.g. first button in a modal).
   useEffect(() => {
-    if (autoFocus) ref.current?.focus();
+    if (autoFocus) (ref.current as HTMLButtonElement | null)?.focus();
   }, [autoFocus]);
 
   const palette =
@@ -34,8 +42,10 @@ export function Button({
 
   return (
     <button
-      ref={ref}
+      ref={ref as React.Ref<HTMLButtonElement>}
       data-focusable
+      className={focused ? 'focused' : undefined}
+      onClick={onClick}
       style={{
         minHeight: 80,
         padding: '0 36px',
@@ -188,9 +198,15 @@ export function VideoCard({
   onSelect,
   disabled,
 }: VideoCardProps) {
+  const { ref, focused } = useFocusable({
+    onEnterPress: disabled ? undefined : () => (ref.current as HTMLButtonElement | null)?.click(),
+  });
+
   return (
     <button
+      ref={disabled ? undefined : (ref as React.Ref<HTMLButtonElement>)}
       data-focusable={!disabled || undefined}
+      className={focused && !disabled ? 'focused' : undefined}
       disabled={disabled}
       onClick={onSelect}
       style={{
@@ -276,6 +292,19 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
+  // LRUD boundary: while the modal is open, arrow keys are trapped inside it.
+  const { ref, focusKey } = useFocusable({
+    focusKey: 'MODAL',
+    trackChildren: true,
+    isFocusBoundary: open,
+  });
+
+  // Move LRUD focus into the modal when it opens.
+  useEffect(() => {
+    if (open) setFocus('MODAL');
+  }, [open]);
+
+  // Back / Escape key closes the modal.
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -291,42 +320,45 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   if (!open) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 300,
-        animation: 'fadein var(--dur-med) var(--ease)',
-      }}
-      onClick={onClose}
-    >
+    <FocusContext.Provider value={focusKey}>
       <div
-        onClick={(e) => e.stopPropagation()}
+        ref={ref as React.Ref<HTMLDivElement>}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         style={{
-          background: 'rgba(255,255,255,0.97)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-5)',
-          maxWidth: 800,
-          width: '90%',
-          maxHeight: '85vh',
-          overflowY: 'auto',
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-3)',
-          boxShadow: '0 8px 48px rgba(0,0,0,0.15)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 300,
+          animation: 'fadein var(--dur-med) var(--ease)',
         }}
+        onClick={onClose}
       >
-        <h2 className="t-h1">{title}</h2>
-        {children}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: 'rgba(255,255,255,0.97)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-5)',
+            maxWidth: 800,
+            width: '90%',
+            maxHeight: '85vh',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-3)',
+            boxShadow: '0 8px 48px rgba(0,0,0,0.15)',
+          }}
+        >
+          <h2 className="t-h1">{title}</h2>
+          {children}
+        </div>
       </div>
-    </div>
+    </FocusContext.Provider>
   );
 }
 

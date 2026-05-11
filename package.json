@@ -8,9 +8,11 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "build:tizen": "node scripts/package-tizen.cjs",
-    "deploy:tv": "powershell -ExecutionPolicy Bypass -File scripts/deploy-tv.ps1"
+    "deploy:tv": "powershell -ExecutionPolicy Bypass -File scripts/deploy-tv.ps1",
+    "deploy:emulator": "powershell -ExecutionPolicy Bypass -File scripts/deploy-tv.ps1 -Target emulator"
   },
   "dependencies": {
+    "@noriginmedia/norigin-spatial-navigation": "^3.1.0",
     "iso8601-duration": "^2.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
