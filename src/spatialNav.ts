@@ -59,8 +59,27 @@ function moveFocus(direction: 'up' | 'down' | 'left' | 'right') {
     return;
   }
 
-  const candidates = all.filter((el) => el !== active);
-  if (candidates.length === 0) return;
+  // Restrict geometric scoring to elements currently within the visible viewport.
+  // Elements scrolled off inside overflow containers have off-screen rects and
+  // can pull focus away from the correct neighbour; the DOM-order fallback below
+  // will still reach them (and scrollIntoView will bring them on screen).
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const candidates = all.filter((el) => {
+    if (el === active) return false;
+    const r = el.getBoundingClientRect();
+    return r.right > 0 && r.left < vw && r.bottom > 0 && r.top < vh;
+  });
+
+  // If no in-viewport candidates exist, go straight to the DOM-order fallback.
+  if (candidates.length === 0) {
+    const idx = all.indexOf(active);
+    const forward = direction === 'down' || direction === 'right';
+    const fallback = forward ? all[Math.min(idx + 1, all.length - 1)] : all[Math.max(idx - 1, 0)];
+    if (fallback && fallback !== active) focusEl(fallback);
+    return;
+  }
+
   const a = center(active);
 
   let best: HTMLElement | null = null;
