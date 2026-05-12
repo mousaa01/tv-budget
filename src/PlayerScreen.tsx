@@ -129,7 +129,7 @@ function TizenPlayer({ videoId, title, knownDuration, budgetCtl }: TizenPlayerPr
       alignItems: 'center', justifyContent: 'center',
       gap: 32, color: '#fff', fontFamily: 'Nunito, sans-serif',
     }}>
-      <div style={{ fontSize: 64 }}>â–¶</div>
+      <div style={{ fontSize: 64 }}>▶</div>
       <div style={{
         fontSize: 28, fontWeight: 800, textAlign: 'center',
         maxWidth: 900, padding: '0 40px',
@@ -149,7 +149,7 @@ function TizenPlayer({ videoId, title, knownDuration, budgetCtl }: TizenPlayerPr
         fontSize: 22, fontWeight: 700,
         color: budgetWarn ? '#fbbf24' : '#cbd5e1',
       }}>
-        {budgetWarn ? 'âš ï¸ ' : 'â± '}{remaining} budget remaining
+        {budgetWarn ? '⚠️ ' : '⏱ '}{remaining} budget remaining
       </div>
 
       <div style={{ fontSize: 18, color: '#475569', marginTop: 16 }}>
@@ -174,6 +174,7 @@ interface WebPlayerProps {
 
 function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   const navigate = useNavigate();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [showTwoMin, setShowTwoMin] = useState(false);
   const [showThirtySec, setShowThirtySec] = useState(false);
   const [maskEndScreen, setMaskEndScreen] = useState(false);
@@ -182,6 +183,26 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
     budgetCtl.startTicking();
     return () => budgetCtl.stopTicking();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoId]);
+
+  // Register as a YouTube postMessage listener so the iframe sends us
+  // playerState events (PLAYING / PAUSED / ENDED). Without this, no events fire.
+  useEffect(() => {
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+    const subscribe = () => {
+      try {
+        win.postMessage(JSON.stringify({ event: 'listening', id: videoId }), '*');
+        win.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'] }), '*');
+      } catch { /* ignore */ }
+    };
+    // Send immediately and again after iframe load to catch both timings.
+    const t = window.setTimeout(subscribe, 500);
+    iframeRef.current?.addEventListener('load', subscribe);
+    return () => {
+      window.clearTimeout(t);
+      iframeRef.current?.removeEventListener('load', subscribe);
+    };
   }, [videoId]);
 
   useEffect(() => {
@@ -227,8 +248,8 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   }, [navigate]);
 
   const bannerText = showTwoMin
-    ? '2 minutes left â€” this video will finish'
-    : showThirtySec ? '30 seconds left â€” this video will finish' : '';
+    ? '2 minutes left — this video will finish'
+    : showThirtySec ? '30 seconds left — this video will finish' : '';
 
   const origin = window.location.origin || 'https://tv-budget.vercel.app';
   const src =
@@ -239,6 +260,7 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#000' }}>
       <iframe
+        ref={iframeRef}
         src={src}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
@@ -252,11 +274,13 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
           pointerEvents: 'auto', zIndex: 50,
         }} onClick={(e) => e.preventDefault()} />
       )}
-      {/* Permanent mask over YouTube's "More videos" pill in the bottom-right corner. */}
+      {/* Cover YouTube's "More videos" pill in the bottom-right.
+          Sized just over the pill, sits to the LEFT of the YouTube logo. */}
       <div aria-hidden style={{
-        position: 'absolute', right: 0, bottom: 0,
-        width: 220, height: 80,
+        position: 'absolute', right: 130, bottom: 8,
+        width: 170, height: 40,
         background: '#000',
+        borderRadius: 20,
         pointerEvents: 'auto', zIndex: 49,
       }} onClick={(e) => e.preventDefault()} />
       <WindDownBanner show={!!bannerText} text={bannerText} />

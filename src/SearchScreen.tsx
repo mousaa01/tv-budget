@@ -81,7 +81,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     >
       <header style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
         <Button id="SEARCH_BACK" variant="secondary" onClick={() => navigate('/')}>
-          â† Back
+          ← Back
         </Button>
         <div className="t-h1">{query}</div>
       </header>
@@ -90,12 +90,12 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         {loading && <LoadingDots />}
         {error && (
           <div style={{ color: 'var(--danger)', padding: 'var(--space-3)' }}>
-            Couldnâ€™t search â€” try again.
+            Couldn't search — try again.
           </div>
         )}
 
         {!loading && !error && fits.length === 0 && (
-          <div className="t-body">No results for â€œ{query}â€.</div>
+          <div className="t-body">No results for “{query}”.</div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>

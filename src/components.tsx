@@ -274,9 +274,7 @@ export function VideoCard({
         <div className="t-meta">{channel}</div>
         <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {isSubscribed && <Pill color="ok">★ Subscribed</Pill>}
-          <Pill color={fits ? 'ok' : 'blocked'}>
-            {fits ? '✓ fits' : '✕ too long for today'}
-          </Pill>
+          {!fits && <Pill color="blocked">✕ too long for today</Pill>}
         </div>
       </div>
     </button>

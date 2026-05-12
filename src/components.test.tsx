@@ -53,9 +53,9 @@ describe('VideoCard', () => {
     expect(screen.getByText('3:32')).toBeInTheDocument();
   });
 
-  it('shows "fits" pill when fits=true', () => {
+  it('shows no pill when fits=true', () => {
     render(<VideoCard {...VIDEO_PROPS} fits onSelect={vi.fn()} />);
-    expect(screen.getByText('✓ fits')).toBeInTheDocument();
+    expect(screen.queryByText(/fits|too long/)).not.toBeInTheDocument();
   });
 
   it('shows "too long" pill when fits=false', () => {
