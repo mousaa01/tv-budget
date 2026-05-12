@@ -177,7 +177,7 @@ export function BackgroundIllustrations() {
             position: 'absolute',
             width: size,
             height: size,
-            opacity: 0.10,
+            opacity: 0.22,
             transform: `rotate(${rotate}deg)`,
             ...pos,
           }}
