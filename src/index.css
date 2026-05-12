@@ -61,20 +61,30 @@ html, body, #root {
 }
 
 button, input { font-family: inherit; color: inherit; }
-button { cursor: pointer; background: none; border: none; }
+button {
+  cursor: pointer; background: none; border: none;
+  /* Reset WebKit button appearance — required for Samsung Tizen to accept custom styles */
+  -webkit-appearance: none;
+  appearance: none;
+}
 
 /* Focus — INVERT the button. Dark navy background + white text + bright yellow ring.
-   Impossible to miss against any palette. No transforms (they break rect-based nav). */
+   Impossible to miss against any palette. No transforms (they break rect-based nav).
+   Both [data-focusable].focused AND button.focused cover all code paths on Tizen WebKit. */
 button:focus,
 button:focus-visible,
+button.focused,
 a:focus,
 [data-focusable]:focus,
 [data-focusable].focused {
   background: #0f172a !important;       /* deep navy */
+  -webkit-appearance: none !important;
+  appearance: none !important;
   background-image: none !important;
   color: #ffffff !important;
   border-color: #fde047 !important;     /* bright yellow */
   outline: 6px solid #fde047 !important;
+  -webkit-outline: 6px solid #fde047 !important;
   outline-offset: 2px;
   box-shadow:
     0 0 0 4px #0f172a,
@@ -89,16 +99,8 @@ input:focus, textarea:focus {
 }
 iframe:focus { outline: none !important; box-shadow: none !important; background: transparent !important; }
 
-/* Force the YouTube IFrame API's injected wrapper div + iframe to fill the container.
-   YT API inserts: containerRef > div#player > iframe
-   Without this, the intermediate div has no height and the iframe collapses to top-left. */
-.yt-fill > div,
-.yt-fill iframe {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-}
+/* iframe focus ring reset — the YouTube iframe itself should never show a focus outline */
+iframe { border: none; }
 
 /* Tabular numbers for any timer-like content */
 .tabular { font-variant-numeric: tabular-nums; }

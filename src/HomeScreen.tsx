@@ -320,8 +320,7 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
                   key={r.id}
                   video={r}
                   disabled={disabled}
-                  onPress={() => navigate(`/play/${r.id}?d=${r.durationSeconds}`)}
-                />
+                  onPress={() => navigate(`/play/${r.id}?d=${r.durationSeconds}&title=${encodeURIComponent(r.title)}&channel=${encodeURIComponent(r.channelTitle)}`)}                />
               );
             })}
           </div>

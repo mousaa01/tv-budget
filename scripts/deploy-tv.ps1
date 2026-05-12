@@ -51,6 +51,12 @@ if ($wgt.Name -ne $safeName) {
 # Just confirm one is visible before we proceed.
 if ($Target -eq "emulator") {
   Write-Host ">>> Checking for Tizen emulator in sdb devices ..." -ForegroundColor Cyan
+} else {
+  # For real TV: attempt to (re)connect. Harmless if already connected.
+  Write-Host ">>> Connecting to TV at 10.0.0.146:26101 ..." -ForegroundColor Cyan
+  $ErrorActionPreference = 'Continue'
+  sdb connect 10.0.0.146:26101 2>&1 | Out-Null
+  $ErrorActionPreference = 'Stop'
 }
 
 $device = (sdb devices | Select-String 'device\s+\S+$' | ForEach-Object {

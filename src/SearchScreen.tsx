@@ -118,7 +118,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               durationLabel={formatMMSS(v.durationSeconds)}
               fits
               isSubscribed={subscribedSet.has(v.channelId)}
-              onSelect={() => navigate(`/play/${v.id}?d=${v.durationSeconds}`)}
+              onSelect={() => navigate(`/play/${v.id}?d=${v.durationSeconds}&title=${encodeURIComponent(v.title)}&channel=${encodeURIComponent(v.channelTitle)}`)}
             />
           ))}
         </div>

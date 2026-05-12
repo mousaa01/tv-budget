@@ -12,7 +12,10 @@ import './index.css';
 init({
   debug: false,
   visualDebug: false,
-  shouldFocusDOMNode: true,
+  // shouldFocusDOMNode: false — don't call native .focus() on TV DOM nodes.
+  // Samsung Tizen WebKit's native focus system can conflict with LRUD's own tracking;
+  // relying purely on className="focused" is more reliable across all three platforms.
+  shouldFocusDOMNode: false,
   throttle: 180,
   throttleKeypresses: true,
 });
