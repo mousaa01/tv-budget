@@ -24,19 +24,22 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fits, setFits] = useState<VideoResult[]>([]);
+  const [tooLong, setTooLong] = useState<VideoResult[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [subscribedSet, setSubscribedSet] = useState<Set<string>>(new Set());
   // Auto-pagination: when channel feeds return 0 eligible videos (e.g. the
-  // most recent uploads are all Shorts), keep paging through until we find
-  // some, capped to avoid runaway API usage.
+  // most recent uploads are all Shorts, or all longer than the remaining
+  // budget), keep paging through until we find some. Capped to keep YouTube
+  // quota and TV CPU bounded — 8 pages × 50 = up to 400 videos scanned.
   const autoPagesRef = useRef(0);
-  const MAX_AUTO_PAGES = 4;
+  const MAX_AUTO_PAGES = 8;
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
     setFits([]);
+    setTooLong([]);
     setNextPageToken(undefined);
     autoPagesRef.current = 0;
     const settings = loadSettings();
@@ -49,6 +52,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           const split = partitionByDuration(filtered, budgetCtl.remaining);
           if (cancelled) return;
           setFits(split.fits);
+          setTooLong(split.tooLong);
           setNextPageToken(page.nextPageToken);
         })
       : searchVideos(query, {
@@ -58,6 +62,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           const filtered = applyBlocklist(raw, settings.blocklistKeywords);
           const split = partitionByDuration(filtered, budgetCtl.remaining);
           setFits(split.fits);
+          setTooLong(split.tooLong);
         });
 
     run
@@ -91,6 +96,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         const filtered = applyBlocklist(page.videos, settings.blocklistKeywords);
         const split = partitionByDuration(filtered, budgetCtl.remaining);
         setFits((prev) => [...prev, ...split.fits]);
+        setTooLong((prev) => [...prev, ...split.tooLong]);
         setNextPageToken(page.nextPageToken);
       })
       .catch(() => {
@@ -99,10 +105,11 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
       .finally(() => setLoadingMore(false));
   };
 
-  // Auto-pagination effect: if the visible list is empty but there are more
-  // pages available (e.g. channel's most-recent uploads are all Shorts),
-  // fetch the next one. Bounded by MAX_AUTO_PAGES to keep YouTube quota
-  // usage and TV CPU low.
+  // Auto-pagination effect: while there are NO playable videos in view and
+  // more pages exist, fetch the next one. We keep going even if `tooLong`
+  // has entries — the user wants something they can watch *now*, so we must
+  // keep searching forward through the channel's history until we find a
+  // video that fits the remaining budget. Bounded by MAX_AUTO_PAGES.
   useEffect(() => {
     if (loading || loadingMore || error) return;
     if (!isChannelMode || !nextPageToken) return;
@@ -152,11 +159,18 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           </div>
         )}
 
-        {!loading && !error && fits.length === 0 && (
+        {!loading && !error && fits.length === 0 && tooLong.length === 0 && (
           <div className="t-body">
             {isChannelMode
-              ? `No videos from ${channelTitle} fit the time you have left.`
+              ? `No videos from ${channelTitle} right now.`
               : `No results for “${query}”.`}
+          </div>
+        )}
+
+        {!loading && !error && fits.length === 0 && tooLong.length > 0 && (
+          <div className="t-body" style={{ marginBottom: 'var(--space-3)' }}>
+            None of these videos fit your remaining {formatMMSS(budgetCtl.remaining)}.
+            They’re shown below so you can see what’s available — ask a parent for more time, or come back tomorrow.
           </div>
         )}
 
@@ -190,6 +204,22 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
                 if (v.durationSeconds > budgetCtl.remaining) return;
                 navigate(`/play/${v.id}?d=${v.durationSeconds}&title=${encodeURIComponent(v.title)}&channel=${encodeURIComponent(v.channelTitle)}`);
               }}
+            />
+          ))}
+          {/* Too-long videos rendered as disabled cards so the user can see
+              what's available even if it doesn't fit their current budget. */}
+          {tooLong.map((v) => (
+            <VideoCard
+              key={`long-${v.id}`}
+              thumbnail={v.thumbnail}
+              title={v.title}
+              channel={v.channelTitle}
+              durationLabel={formatMMSS(v.durationSeconds)}
+              fits={false}
+              disabled
+              isSubscribed={subscribedSet.has(v.channelId)}
+              layout={isChannelMode ? 'grid' : 'list'}
+              onSelect={() => { /* disabled */ }}
             />
           ))}
           {isChannelMode && nextPageToken && !loading && (

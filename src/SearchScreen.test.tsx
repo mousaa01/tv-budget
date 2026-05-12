@@ -25,6 +25,7 @@ vi.mock('./youtube', async (importActual) => {
   return {
     ...actual,
     fetchChannelFeed: (...args: unknown[]) => fetchChannelFeedMock(...args),
+    searchVideos: vi.fn(),
   };
 });
 
@@ -119,13 +120,16 @@ describe('SearchScreen channel mode', () => {
     await waitFor(() => expect(screen.getByText('Video a')).toBeInTheDocument());
     expect(screen.getByText('Video b')).toBeInTheDocument();
     expect(screen.getByText('Video d')).toBeInTheDocument();
-    expect(screen.queryByText('Video c')).not.toBeInTheDocument(); // too short
+    expect(screen.queryByText('Video c')).not.toBeInTheDocument(); // too short — fully filtered
 
     // Click load-more for page 2
     await act(async () => { fireEvent.click(screen.getByText('Load more videos')); });
     await waitFor(() => expect(screen.getByText('Video e')).toBeInTheDocument());
     expect(screen.getByText('Video g')).toBeInTheDocument();
-    expect(screen.queryByText('Video f')).not.toBeInTheDocument(); // too long
+    // Video f (4000s) is too long for the 1h budget — appears as DISABLED card,
+    // not hidden, so the user knows the channel has more content.
+    expect(screen.getByText('Video f')).toBeInTheDocument();
+    expect(screen.getByText('Video f').closest('button')).toBeDisabled();
 
     // Click load-more for page 3
     await act(async () => { fireEvent.click(screen.getByText('Load more videos')); });
@@ -139,11 +143,11 @@ describe('SearchScreen channel mode', () => {
     const eligibleIds = ['a', 'b', 'd', 'e', 'g', 'h', 'i'];
     for (const id of eligibleIds) {
       expect(screen.getByText(`Video ${id}`)).toBeInTheDocument();
+      expect(screen.getByText(`Video ${id}`).closest('button')).not.toBeDisabled();
     }
 
-    // Filtered videos must NEVER appear
+    // Sub-2-min Shorts are still fully filtered (never visible).
     expect(screen.queryByText('Video c')).not.toBeInTheDocument();
-    expect(screen.queryByText('Video f')).not.toBeInTheDocument();
 
     // Three pages requested with the expected page tokens
     expect(fetchChannelFeedMock).toHaveBeenNthCalledWith(1, 'UC_test');
@@ -175,7 +179,7 @@ describe('SearchScreen channel mode', () => {
 
   it('caps auto-pagination so an all-Shorts channel does not loop forever', async () => {
     // Every page is shorts only with a next token — auto loader must stop
-    // after MAX_AUTO_PAGES (4) follow-ups (1 initial + 4 auto = 5 total).
+    // after MAX_AUTO_PAGES (8) follow-ups (1 initial + 8 auto = 9 total).
     fetchChannelFeedMock.mockImplementation((_id: string, token?: string) => {
       const next = token ? `${token}_n` : 'P1';
       return Promise.resolve({
@@ -188,13 +192,13 @@ describe('SearchScreen channel mode', () => {
 
     // Wait long enough for all auto-loads to settle.
     await waitFor(
-      () => expect(fetchChannelFeedMock).toHaveBeenCalledTimes(5),
-      { timeout: 3000 },
+      () => expect(fetchChannelFeedMock).toHaveBeenCalledTimes(9),
+      { timeout: 5000 },
     );
 
-    // Stays at 5 — does not keep paging.
+    // Stays at 9 — does not keep paging.
     await new Promise((r) => setTimeout(r, 100));
-    expect(fetchChannelFeedMock).toHaveBeenCalledTimes(5);
+    expect(fetchChannelFeedMock).toHaveBeenCalledTimes(9);
   });
 
   it('does not show videos longer than the live remaining budget', async () => {
@@ -211,6 +215,70 @@ describe('SearchScreen channel mode', () => {
       </MemoryRouter>,
     );
     await waitFor(() => expect(screen.getByText('Video short_ok')).toBeInTheDocument());
-    expect(screen.queryByText('Video long_no')).not.toBeInTheDocument();
+    // The too-long video IS shown (as a disabled card) so the user knows it exists.
+    expect(screen.getByText('Video long_no')).toBeInTheDocument();
+    // ...but its card is disabled so it cannot be selected/navigated to.
+    const longBtn = screen.getByText('Video long_no').closest('button');
+    expect(longBtn).toBeDisabled();
+    const okBtn = screen.getByText('Video short_ok').closest('button');
+    expect(okBtn).not.toBeDisabled();
+  });
+
+  it('DuDuPopTOY scenario: 9-min budget, page 1 all 10-20 min, page 2 has a 5-min video — auto-paginates to find it', async () => {
+    // First page mimics DuDuPopTOY: all toy reviews 10-20 min (none fit 9 min).
+    // Second page contains a 5-min clip that DOES fit. Auto-paginator must
+    // keep going past tooLong results to surface the playable video.
+    const tooLong = [
+      makeVideo('dudu1', 12 * 60),
+      makeVideo('dudu2', 15 * 60),
+      makeVideo('dudu3', 18 * 60),
+      makeVideo('dudu4', 10 * 60),
+      makeVideo('dudu5', 20 * 60),
+    ];
+    const page2 = {
+      videos: [makeVideo('dudu_short', 5 * 60), makeVideo('dudu6', 14 * 60)],
+      nextPageToken: undefined,
+    };
+    fetchChannelFeedMock
+      .mockResolvedValueOnce({ videos: tooLong, nextPageToken: 'PAGE2' })
+      .mockResolvedValueOnce(page2);
+
+    render(
+      <MemoryRouter initialEntries={['/search?channelId=UCdudu&title=DuDuPopTOY']}>
+        <Routes>
+          <Route path="/search" element={<SearchScreen budgetCtl={makeBudget(561)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    // The 5-min video from page 2 must appear, and be enabled (not disabled).
+    await waitFor(() => expect(screen.getByText('Video dudu_short')).toBeInTheDocument());
+    expect(screen.getByText('Video dudu_short').closest('button')).not.toBeDisabled();
+    // The too-long videos still appear as disabled cards.
+    expect(screen.getByText('Video dudu1').closest('button')).toBeDisabled();
+    // Two pages fetched total.
+    expect(fetchChannelFeedMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('text search: low budget shows over-budget results as disabled, not as empty list', async () => {
+    // Mock searchVideos via youtube module — re-mock the module per-test.
+    const { searchVideos } = await import('./youtube');
+    vi.mocked(searchVideos).mockResolvedValueOnce([
+      makeVideo('s1', 480), // 8 min — too long for 5 min budget
+      makeVideo('s2', 240), // 4 min — fits
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/search?q=lego']}>
+        <Routes>
+          <Route path="/search" element={<SearchScreen budgetCtl={makeBudget(300)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Video s2')).toBeInTheDocument());
+    expect(screen.getByText('Video s1')).toBeInTheDocument();
+    expect(screen.getByText('Video s2').closest('button')).not.toBeDisabled();
+    expect(screen.getByText('Video s1').closest('button')).toBeDisabled();
   });
 });
