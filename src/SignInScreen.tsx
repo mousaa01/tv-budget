@@ -29,24 +29,6 @@ export function SignInScreen({ error }: SignInScreenProps) {
       <p className="t-body" style={{ color: 'var(--text-dim)', maxWidth: 700 }}>
         We'll show videos from the channels you're subscribed to.
       </p>
-      <div
-        style={{
-          maxWidth: 700,
-          padding: '14px 20px',
-          background: 'rgba(6,182,212,0.10)',
-          border: '2px solid rgba(6,182,212,0.35)',
-          borderRadius: 'var(--radius-md)',
-          fontSize: 18,
-          lineHeight: 1.5,
-          color: 'var(--text)',
-          textAlign: 'left',
-        }}
-      >
-        <strong>Tip:</strong> on the Google sign-in screen, choose your <em>personal</em> YouTube
-        account — not a brand channel. Brand channels store their own subscriptions separately and
-        won't show what you expect. Newly created channels can also take up to 24 hours before
-        their subscriptions appear here (a YouTube API limitation).
-      </div>
       <Button
         autoFocus
         onClick={() => {
