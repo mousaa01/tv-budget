@@ -130,14 +130,32 @@ interface Item {
 }
 
 const ITEMS: Item[] = [
-  { Component: Planet,        size: 148, rotate: -12, pos: { left: '1%',   top: '1%'    } },
-  { Component: Atom,          size: 130, rotate:  18, pos: { right: '2%',  top: '3%'    } },
+  // Left edge
+  { Component: Planet,        size: 148, rotate: -12, pos: { left: '1%',   top: '2%'    } },
   { Component: Flask,         size: 118, rotate:  -8, pos: { left: '0.5%', top: '42%'   } },
-  { Component: DinoFootprint, size: 132, rotate:   8, pos: { right: '1.5%',top: '38%'   } },
-  { Component: LegoBrick,     size: 142, rotate:  14, pos: { left: '1.5%', bottom: '6%' } },
+  { Component: LegoBrick,     size: 142, rotate:  14, pos: { left: '1.5%', bottom: '5%' } },
+  // Right edge
+  { Component: Atom,          size: 130, rotate:  18, pos: { right: '1.5%',top: '3%'    } },
+  { Component: DinoFootprint, size: 132, rotate:   8, pos: { right: '1%',  top: '38%'   } },
   { Component: Tools,         size: 128, rotate: -14, pos: { right: '1.5%',bottom: '4%' } },
-  { Component: StarCluster,   size:  90, rotate:   5, pos: { left: '42%',  top: '0.5%'  } },
   { Component: Telescope,     size: 112, rotate: -20, pos: { right: '3.5%',top: '67%'   } },
+  // Top centre strip
+  { Component: StarCluster,   size:  88, rotate:   5, pos: { left: '22%',  top: '1%'    } },
+  { Component: LegoBrick,     size:  96, rotate: -10, pos: { left: '42%',  top: '0.5%'  } },
+  { Component: Flask,         size:  90, rotate:  16, pos: { right: '22%', top: '0.5%'  } },
+  // Mid-left band
+  { Component: DinoFootprint, size: 100, rotate: -15, pos: { left: '10%',  top: '24%'   } },
+  { Component: Telescope,     size:  96, rotate:  22, pos: { left: '8%',   top: '58%'   } },
+  // Centre column
+  { Component: Planet,        size: 110, rotate:  10, pos: { left: '44%',  top: '22%'   } },
+  { Component: Atom,          size: 104, rotate: -18, pos: { left: '46%',  top: '55%'   } },
+  // Mid-right band
+  { Component: StarCluster,   size:  92, rotate:  -6, pos: { right: '10%', top: '22%'   } },
+  { Component: Tools,         size:  96, rotate:  12, pos: { right: '9%',  top: '57%'   } },
+  // Bottom centre strip
+  { Component: Atom,          size:  94, rotate:  -8, pos: { left: '23%',  bottom: '4%' } },
+  { Component: DinoFootprint, size: 100, rotate:  14, pos: { left: '44%',  bottom: '3%' } },
+  { Component: Planet,        size:  92, rotate:  -5, pos: { right: '23%', bottom: '4%' } },
 ];
 
 export function BackgroundIllustrations() {
@@ -159,7 +177,7 @@ export function BackgroundIllustrations() {
             position: 'absolute',
             width: size,
             height: size,
-            opacity: 0.14,
+            opacity: 0.10,
             transform: `rotate(${rotate}deg)`,
             ...pos,
           }}
