@@ -108,7 +108,19 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
     setSettings({ ...settings, blocklistKeywords: settings.blocklistKeywords.filter((x) => x !== k) });
   };
 
-  const history = loadHistory().slice(0, 7);
+  // Build last-7-days view: archived history covers prior days; today's row is
+  // synthesized live from budgetCtl so seconds tick in real time. The stored
+  // today entry (if any) supplies the videos-watched count.
+  const archived = loadHistory();
+  const today = budgetCtl.budget.date;
+  const todayArchived = archived.find((h) => h.date === today);
+  const priorDays = archived.filter((h) => h.date !== today);
+  const todayRow = {
+    date: today,
+    secondsUsed: budgetCtl.budget.secondsUsedToday,
+    videosWatched: todayArchived?.videosWatched ?? 0,
+  };
+  const history = [todayRow, ...priorDays].slice(0, 7);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -332,7 +344,7 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
                 ) : (
                   history.map((h) => (
                     <tr key={h.date} style={{ borderTop: '1px solid var(--border)' }}>
-                      <td style={{ padding: 8 }}>{h.date}</td>
+                      <td style={{ padding: 8 }}>{h.date === today ? `${h.date} (today)` : h.date}</td>
                       <td className="tabular" style={{ padding: 8 }}>{formatHMS(h.secondsUsed)}</td>
                       <td className="tabular" style={{ padding: 8 }}>{h.videosWatched}</td>
                     </tr>
