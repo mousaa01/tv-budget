@@ -94,10 +94,17 @@ export function useBudget(): UseBudget {
   const remaining = remainingSeconds(budget);
   const noNewVideos = remaining <= 0;
 
-  // 5-minute warning: fire once per day when remaining first drops to <=300s.
+  // 5-minute warning: fire when remaining first drops to <=300s. Re-arm if
+  // remaining is bumped back above the threshold (e.g. parent grants bonus,
+  // or the daily limit is increased), so the warning fires again next time
+  // we cross down through 5 minutes.
   useEffect(() => {
     const prev = lastRemainingRef.current;
     lastRemainingRef.current = remaining;
+    if (remaining > 300 && warnedForRef.current === budget.date) {
+      // Re-arm so the next downward crossing can fire again today.
+      warnedForRef.current = null;
+    }
     if (
       prev > 300 &&
       remaining <= 300 &&

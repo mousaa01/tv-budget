@@ -146,7 +146,9 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               : { display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }
           }
         >
-          {fits.map((v) => (
+          {fits
+            .filter((v) => v.durationSeconds <= budgetCtl.remaining)
+            .map((v) => (
             <VideoCard
               key={v.id}
               thumbnail={v.thumbnail}
@@ -156,7 +158,12 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               fits
               isSubscribed={subscribedSet.has(v.channelId)}
               layout={isChannelMode ? 'grid' : 'list'}
-              onSelect={() => navigate(`/play/${v.id}?d=${v.durationSeconds}&title=${encodeURIComponent(v.title)}&channel=${encodeURIComponent(v.channelTitle)}`)}
+              onSelect={() => {
+                // Guard against races: budget may have ticked down between
+                // when the list was fetched and the user pressing the card.
+                if (v.durationSeconds > budgetCtl.remaining) return;
+                navigate(`/play/${v.id}?d=${v.durationSeconds}&title=${encodeURIComponent(v.title)}&channel=${encodeURIComponent(v.channelTitle)}`);
+              }}
             />
           ))}
           {isChannelMode && nextPageToken && !loading && (
@@ -168,7 +175,8 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           )}
         </div>
       </main>
-      <ScrollNav targetRef={mainRef} />
+      {/* Push above the fixed Settings button (~64px tall + spacing). */}
+      <ScrollNav targetRef={mainRef} bottomOffset="calc(var(--space-4) + 88px)" />
     </div>
   );
 }
