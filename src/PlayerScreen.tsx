@@ -274,22 +274,22 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
           pointerEvents: 'auto', zIndex: 50,
         }} onClick={(e) => e.preventDefault()} />
       )}
-      {/* Cover the YouTube top bar (title + channel chip) so clicks there
-          don't open YouTube in a new tab. */}
+      {/* Transparent click-shield over YouTube's top bar (title + channel chip)
+          so taps there don't open YouTube — without hiding any video pixels. */}
       <div aria-hidden style={{
         position: 'absolute', left: 0, right: 0, top: 0,
         height: 80,
-        background: '#000',
+        background: 'transparent',
         pointerEvents: 'auto', zIndex: 49,
-      }} onClick={(e) => e.preventDefault()} />
-      {/* Cover the entire YouTube control strip below the progress bar
-          (YT logo, "More videos" pill, and any other branding/links). */}
+      }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
+      {/* Transparent click-shield over the bottom control strip (YT logo,
+          "More videos" pill, etc.) — blocks navigation without masking pixels. */}
       <div aria-hidden style={{
         position: 'absolute', left: 0, right: 0, bottom: 0,
         height: 56,
-        background: '#000',
+        background: 'transparent',
         pointerEvents: 'auto', zIndex: 49,
-      }} onClick={(e) => e.preventDefault()} />
+      }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
       <WindDownBanner show={!!bannerText} text={bannerText} />
     </div>
   );
