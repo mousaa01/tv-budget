@@ -77,8 +77,15 @@ export default function App() {
       {/* Skip background + timer overlay on the player route: the iframe
           fully covers them, and avoiding the per-second re-render of these
           fixed-position overlays meaningfully improves video smoothness on TV. */}
+      {/* BackgroundIllustrations is purely decorative and fully hidden behind
+          the player iframe — skipping it on /play/ saves real GPU time on TV.
+          TimerOverlay is now memoized and cheap, and the user wants the budget
+          visible on every screen, so we keep it everywhere. */}
       {!onPlayer && <BackgroundIllustrations />}
-      {!onPlayer && <TimerOverlay remainingSeconds={budgetCtl.remaining} />}
+      <TimerOverlay
+        remainingSeconds={budgetCtl.remaining}
+        usedSeconds={budgetCtl.budget.secondsUsedToday}
+      />
       <FiveMinuteWarning trigger={budgetCtl.fiveMinuteWarning} />
       {!onPlayer && (
         <AccountBadge

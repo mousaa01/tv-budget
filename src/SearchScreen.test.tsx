@@ -150,4 +150,67 @@ describe('SearchScreen channel mode', () => {
     expect(fetchChannelFeedMock).toHaveBeenNthCalledWith(2, 'UC_test', 'PAGE2');
     expect(fetchChannelFeedMock).toHaveBeenNthCalledWith(3, 'UC_test', 'PAGE3');
   });
+
+  it('auto-paginates when the first page contains zero eligible videos (e.g. all Shorts)', async () => {
+    // Page 1: 50 sub-2-min Shorts → 0 fits.
+    // Page 2: 2 valid videos → fits found, auto-pagination stops.
+    const shorts = Array.from({ length: 50 }, (_, i) => makeVideo(`s${i}`, 60));
+    const page1 = { videos: shorts, nextPageToken: 'PAGE2' };
+    const page2 = {
+      videos: [makeVideo('real1', 240), makeVideo('real2', 300)],
+      nextPageToken: undefined,
+    };
+    fetchChannelFeedMock
+      .mockResolvedValueOnce(page1)
+      .mockResolvedValueOnce(page2);
+
+    renderChannel();
+
+    // Without intervention, real videos from page 2 should appear automatically.
+    await waitFor(() => expect(screen.getByText('Video real1')).toBeInTheDocument());
+    expect(screen.getByText('Video real2')).toBeInTheDocument();
+    expect(fetchChannelFeedMock).toHaveBeenCalledTimes(2);
+    expect(fetchChannelFeedMock).toHaveBeenNthCalledWith(2, 'UC_test', 'PAGE2');
+  });
+
+  it('caps auto-pagination so an all-Shorts channel does not loop forever', async () => {
+    // Every page is shorts only with a next token — auto loader must stop
+    // after MAX_AUTO_PAGES (4) follow-ups (1 initial + 4 auto = 5 total).
+    fetchChannelFeedMock.mockImplementation((_id: string, token?: string) => {
+      const next = token ? `${token}_n` : 'P1';
+      return Promise.resolve({
+        videos: [makeVideo(`short_${next}`, 60)],
+        nextPageToken: next,
+      });
+    });
+
+    renderChannel();
+
+    // Wait long enough for all auto-loads to settle.
+    await waitFor(
+      () => expect(fetchChannelFeedMock).toHaveBeenCalledTimes(5),
+      { timeout: 3000 },
+    );
+
+    // Stays at 5 — does not keep paging.
+    await new Promise((r) => setTimeout(r, 100));
+    expect(fetchChannelFeedMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('does not show videos longer than the live remaining budget', async () => {
+    // Render with only 200 seconds remaining: the 600s video is filtered out.
+    fetchChannelFeedMock.mockResolvedValue({
+      videos: [makeVideo('short_ok', 180), makeVideo('long_no', 600)],
+      nextPageToken: undefined,
+    });
+    render(
+      <MemoryRouter initialEntries={['/search?channelId=UC_test&title=Test%20Channel']}>
+        <Routes>
+          <Route path="/search" element={<SearchScreen budgetCtl={makeBudget(200)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByText('Video short_ok')).toBeInTheDocument());
+    expect(screen.queryByText('Video long_no')).not.toBeInTheDocument();
+  });
 });

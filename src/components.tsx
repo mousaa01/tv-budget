@@ -109,15 +109,19 @@ export function Pill({ color = 'dim', children }: PillProps) {
 
 interface TimerOverlayProps {
   remainingSeconds: number;
+  usedSeconds?: number;
 }
 
-export function TimerOverlay({ remainingSeconds }: TimerOverlayProps) {
+function TimerOverlayImpl({ remainingSeconds, usedSeconds }: TimerOverlayProps) {
   const isWarn = remainingSeconds > 0 && remainingSeconds <= 120;
-  const text = remainingSeconds >= 3600 ? formatHMS(remainingSeconds) : formatMMSS(remainingSeconds);
+  const remText = remainingSeconds >= 3600 ? formatHMS(remainingSeconds) : formatMMSS(remainingSeconds);
+  const usedText = usedSeconds === undefined
+    ? null
+    : (usedSeconds >= 3600 ? formatHMS(usedSeconds) : formatMMSS(usedSeconds));
 
   return (
     <div
-      aria-label={`Time remaining: ${text}`}
+      aria-label={`Time remaining: ${remText}${usedText ? `, time watched today: ${usedText}` : ''}`}
       className="tabular"
       style={{
         position: 'fixed',
@@ -125,12 +129,12 @@ export function TimerOverlay({ remainingSeconds }: TimerOverlayProps) {
         left: 'var(--space-4)',
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 8,
+        gap: 12,
         padding: '8px 20px',
         background: isWarn ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.7)',
         border: `2px solid ${isWarn ? 'rgba(245,158,11,0.6)' : 'rgba(30,27,75,0.15)'}`,
         borderRadius: 999,
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: 800,
         color: isWarn ? '#b45309' : 'var(--text-dim)',
         animation: isWarn ? 'pulse 1.5s var(--ease) infinite' : undefined,
@@ -139,10 +143,19 @@ export function TimerOverlay({ remainingSeconds }: TimerOverlayProps) {
         userSelect: 'none',
       }}
     >
-      ⏱ {text}
+      <span>⏱ {remText} left</span>
+      {usedText && (
+        <span style={{ opacity: 0.75, fontSize: 18 }}>
+          · {usedText} watched today
+        </span>
+      )}
     </div>
   );
 }
+
+// Memoized so per-second budget ticks only re-render this overlay (not its
+// parents repeatedly).
+export const TimerOverlay = memo(TimerOverlayImpl);
 
 /* ---------------- WindDownBanner ---------------- */
 

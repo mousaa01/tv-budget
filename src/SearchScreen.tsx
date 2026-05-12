@@ -26,6 +26,11 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
   const [fits, setFits] = useState<VideoResult[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [subscribedSet, setSubscribedSet] = useState<Set<string>>(new Set());
+  // Auto-pagination: when channel feeds return 0 eligible videos (e.g. the
+  // most recent uploads are all Shorts), keep paging through until we find
+  // some, capped to avoid runaway API usage.
+  const autoPagesRef = useRef(0);
+  const MAX_AUTO_PAGES = 4;
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +38,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     setError(null);
     setFits([]);
     setNextPageToken(undefined);
+    autoPagesRef.current = 0;
     const settings = loadSettings();
     const subscribed = loadSubscribedChannels();
     setSubscribedSet(new Set(subscribed?.channels.map((c) => c.id) ?? []));
@@ -69,8 +75,15 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     };
   }, [query, channelId, isChannelMode, budgetCtl.remaining]);
 
-  const loadMore = () => {
+  const loadMore = (auto = false) => {
     if (!isChannelMode || !nextPageToken || loadingMore) return;
+    if (auto) {
+      // Increment up-front so concurrent / rapid effect re-runs all see the
+      // latest count and the cap is honored even if state batching delays
+      // the loadingMore flag.
+      if (autoPagesRef.current >= MAX_AUTO_PAGES) return;
+      autoPagesRef.current += 1;
+    }
     setLoadingMore(true);
     const settings = loadSettings();
     fetchChannelFeed(channelId, nextPageToken)
@@ -81,10 +94,23 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         setNextPageToken(page.nextPageToken);
       })
       .catch(() => {
-        /* ignore */
+        /* ignore — user can retry via Load more */
       })
       .finally(() => setLoadingMore(false));
   };
+
+  // Auto-pagination effect: if the visible list is empty but there are more
+  // pages available (e.g. channel's most-recent uploads are all Shorts),
+  // fetch the next one. Bounded by MAX_AUTO_PAGES to keep YouTube quota
+  // usage and TV CPU low.
+  useEffect(() => {
+    if (loading || loadingMore || error) return;
+    if (!isChannelMode || !nextPageToken) return;
+    if (fits.length > 0) return;
+    if (autoPagesRef.current >= MAX_AUTO_PAGES) return;
+    loadMore(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, loadingMore, error, isChannelMode, nextPageToken, fits.length]);
 
   // Screen-level LRUD container.
   const { ref: screenRef } = useFocusable({
@@ -168,7 +194,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           ))}
           {isChannelMode && nextPageToken && !loading && (
             <div style={{ gridColumn: '1 / -1', padding: 'var(--space-3) 0', display: 'flex', justifyContent: 'center' }}>
-              <Button variant="secondary" onClick={loadMore}>
+              <Button variant="secondary" onClick={() => loadMore(false)}>
                 {loadingMore ? 'Loading…' : 'Load more videos'}
               </Button>
             </div>
