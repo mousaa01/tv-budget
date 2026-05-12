@@ -166,11 +166,16 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
 
           {/* Bonus minutes */}
           <section>
-            <h3 className="t-h2">Bonus minutes for today</h3>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
-              <Button variant="secondary" onClick={() => addBonus(10)}>+10</Button>
-              <Button variant="secondary" onClick={() => addBonus(20)}>+20</Button>
-              <Button variant="secondary" onClick={() => addBonus(30)}>+30</Button>
+            <h3 className="t-h2">Adjust today's time</h3>
+            <div className="t-meta" style={{ marginTop: 4 }}>
+              Currently: {settings.dailyLimitMinutes + Math.round(budgetCtl.budget.bonusSecondsToday / 60)} min total today
+              {budgetCtl.budget.bonusSecondsToday !== 0
+                ? ` (${budgetCtl.budget.bonusSecondsToday >= 0 ? '+' : ''}${Math.round(budgetCtl.budget.bonusSecondsToday / 60)} min bonus)`
+                : ''}
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)', flexWrap: 'wrap' }}>
+              <Button variant="secondary" onClick={() => addBonus(-5)}>−5 min</Button>
+              <Button variant="secondary" onClick={() => addBonus(5)}>+5 min</Button>
             </div>
           </section>
 

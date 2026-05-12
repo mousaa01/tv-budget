@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BackgroundIllustrations } from './BackgroundIllustrations';
-import { Button, LoadingDots, TimerOverlay } from './components';
+import { Button, FiveMinuteWarning, LoadingDots, TimerOverlay } from './components';
 import { HomeScreen } from './HomeScreen';
 import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, parseTokenFromHash } from './oauth';
 import { clearSubscribedChannels, loadSubscribedChannels, saveSubscribedChannels } from './storage';
@@ -76,6 +76,7 @@ export default function App() {
     <>
       <BackgroundIllustrations />
       <TimerOverlay remainingSeconds={budgetCtl.remaining} />
+      <FiveMinuteWarning trigger={budgetCtl.fiveMinuteWarning} />
       {!onPlayer && (
         <AccountBadge
           name={auth.profile?.name ?? 'Signed in'}

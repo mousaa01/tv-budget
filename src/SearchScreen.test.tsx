@@ -48,6 +48,7 @@ function makeBudget(remaining = 3600): UseBudget {
     stopTicking: vi.fn(),
     addBonusSeconds: vi.fn(),
     refresh: vi.fn(),
+    fiveMinuteWarning: 0,
   };
 }
 

@@ -1,6 +1,6 @@
 import { FocusContext, setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import type { ReactNode, ButtonHTMLAttributes } from 'react';
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { formatHMS, formatMMSS } from './format';
 
 /* ---------------- Button ---------------- */
@@ -172,6 +172,80 @@ export function WindDownBanner({ show, text }: BannerProps) {
       }}
     >
       {text}
+    </div>
+  );
+}
+
+/* ---------------- FiveMinuteWarning ---------------- */
+
+interface FiveMinuteWarningProps {
+  trigger: number; // changes (e.g. ticks up) to fire the warning
+}
+
+export function FiveMinuteWarning({ trigger }: FiveMinuteWarningProps) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (trigger === 0) return;
+    setVisible(true);
+    // Speak via Web Speech API
+    try {
+      const synth = window.speechSynthesis;
+      if (synth) {
+        synth.cancel();
+        const u = new SpeechSynthesisUtterance('5 minutes left');
+        u.rate = 0.95;
+        u.pitch = 1.0;
+        u.volume = 1.0;
+        synth.speak(u);
+      }
+    } catch {
+      /* speech API not available — silently skip */
+    }
+    // Also play a short beep tone in case TTS is unavailable
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (Ctx) {
+        const ctx = new Ctx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.value = 0.18;
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+        osc.onended = () => ctx.close();
+      }
+    } catch {
+      /* audio not available */
+    }
+    const t = window.setTimeout(() => setVisible(false), 6000);
+    return () => window.clearTimeout(t);
+  }, [trigger]);
+
+  if (!visible) return null;
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      style={{
+        position: 'fixed',
+        top: 'var(--space-4)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'var(--warn)',
+        color: '#1a1a1a',
+        padding: '18px 32px',
+        borderRadius: 'var(--radius-md)',
+        fontSize: 36,
+        fontWeight: 800,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        zIndex: 300,
+        animation: 'slidedown var(--dur-med) var(--ease)',
+      }}
+    >
+      ⏰ 5 minutes left!
     </div>
   );
 }

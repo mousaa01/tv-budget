@@ -31,6 +31,7 @@ function makeBudget(overrides: Partial<UseBudget> = {}): UseBudget {
     stopTicking: vi.fn(),
     addBonusSeconds: vi.fn(),
     refresh: vi.fn(),
+    fiveMinuteWarning: 0,
     ...overrides,
   };
 }
