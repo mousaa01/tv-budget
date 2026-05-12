@@ -25,8 +25,20 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
   const [showThirtySec, setShowThirtySec] = useState(false);
   const [maskEndScreen, setMaskEndScreen] = useState(false);
 
-  // Start budget timer and record this video as watched immediately on mount.
-  // Direct iframe approach: no JS API to wait for — budget starts right away.
+  // Diagnostic: track what state postMessage reports so we can see it on TV.
+  const [ytStatus, setYtStatus] = useState<string>('waiting for YouTube…');
+  const [elapsed, setElapsed] = useState(0);
+  const mountTime = useRef(Date.now());
+
+  // Elapsed seconds counter — shows on screen so we can see the overlay updating.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setElapsed(Math.floor((Date.now() - mountTime.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Start budget timer and record this video on mount.
   useEffect(() => {
     if (!videoId) return;
     budgetCtl.startTicking();
@@ -45,7 +57,6 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
   }, [videoId]);
 
   // Listen for YouTube player state via postMessage (requires enablejsapi=1 in src).
-  // YouTube sends: { event: 'infoDelivery', info: { playerState: N } }
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       try {
@@ -53,10 +64,17 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
         const state: number | undefined = data?.info?.playerState ?? data?.playerState;
         if (state === YT_PLAYING) {
           budgetCtl.startTicking();
+          setYtStatus('▶ playing');
         } else if (state === YT_PAUSED) {
           budgetCtl.stopTicking();
+          setYtStatus('⏸ paused');
         } else if (state === YT_ENDED) {
+          setYtStatus('⏹ ended → going home');
           navigate('/', { replace: true });
+        } else if (state !== undefined) {
+          setYtStatus(`state=${state}`);
+        } else if (data?.event) {
+          setYtStatus(`event: ${String(data.event)}`);
         }
       } catch { /* ignore non-JSON messages */ }
     };
@@ -71,9 +89,9 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
   useEffect(() => {
     const start = Date.now();
     const id = window.setInterval(() => {
-      const elapsed = (Date.now() - start) / 1000;
+      const elapsedSec = (Date.now() - start) / 1000;
       if (knownDuration > 0) {
-        const remainingInVideo = Math.max(0, knownDuration - elapsed);
+        const remainingInVideo = Math.max(0, knownDuration - elapsedSec);
         setMaskEndScreen(remainingInVideo > 0 && remainingInVideo <= 25);
       }
       const budgetRemaining = remainingRef.current;
@@ -113,45 +131,41 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
     `&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#000' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#1a1a2e' }}>
       <iframe
         src={src}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-        allow="autoplay; fullscreen"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
         title="YouTube video"
       />
 
-      {/* End-screen mask: blocks bottom-right area where YouTube end cards appear */}
+      {/* Diagnostic overlay — dark strip at top showing iframe URL and YT postMessage status.
+          Background is dark navy (#1a1a2e) so if iframe is blank we see the overlay, not black. */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        background: 'rgba(10,10,30,0.88)',
+        color: '#7dd3fc', fontSize: 18, fontFamily: 'monospace',
+        padding: '8px 16px', zIndex: 200, lineHeight: 1.6,
+        pointerEvents: 'none',
+      }}>
+        <div>📺 {elapsed}s | YT: {ytStatus}</div>
+        <div style={{ fontSize: 14, color: '#94a3b8', wordBreak: 'break-all' }}>{src}</div>
+      </div>
+
+      {/* End-screen mask */}
       {maskEndScreen && (
         <>
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute',
-              right: 0,
-              bottom: 0,
-              width: '32%',
-              height: '70%',
-              background: 'linear-gradient(to top left, rgba(0,0,0,0.85), rgba(0,0,0,0))',
-              pointerEvents: 'auto',
-              zIndex: 50,
-            }}
-            onClick={(e) => e.preventDefault()}
-          />
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: '25%',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0))',
-              pointerEvents: 'none',
-              zIndex: 49,
-            }}
-          />
+          <div aria-hidden style={{
+            position: 'absolute', right: 0, bottom: 0, width: '32%', height: '70%',
+            background: 'linear-gradient(to top left, rgba(0,0,0,0.85), rgba(0,0,0,0))',
+            pointerEvents: 'auto', zIndex: 50,
+          }} onClick={(e) => e.preventDefault()} />
+          <div aria-hidden style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: '25%',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0))',
+            pointerEvents: 'none', zIndex: 49,
+          }} />
         </>
       )}
 

@@ -21,6 +21,15 @@ $env:Path = "$env:TIZEN_TOOLS\ide\bin;$env:TIZEN_TOOLS;$env:Path"
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
 
+# --- Run tests first. Abort deploy if any test fails. ---
+Write-Host ">>> Running tests before deploy" -ForegroundColor Cyan
+npm run test
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "!!! Tests failed — deploy aborted." -ForegroundColor Red
+  exit 1
+}
+Write-Host "    All tests passed." -ForegroundColor Green
+
 Write-Host ">>> Signing & packaging tizen/ -> .wgt" -ForegroundColor Cyan
 Get-ChildItem "tizen\*.wgt" -ErrorAction SilentlyContinue | Remove-Item -Force
 
