@@ -1,123 +1,162 @@
 /**
  * Decorative background illustrations scattered across the app.
- * Flat, friendly SVG drawings in warm tones — consistent art style.
+ * Flat, friendly SVG icons themed around TV watching and budgeting.
  * Fixed-position, pointer-events: none, low opacity so they never compete with content.
  */
 
-function Planet() {
+/** Classic CRT-style TV with antenna */
+function TV() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="8"  cy="14" r="3.5" fill="#facc15" />
-      <circle cx="90" cy="9"  r="2.5" fill="#facc15" />
-      <circle cx="94" cy="66" r="2"   fill="#fde047" />
-      <circle cx="5"  cy="82" r="2"   fill="#fde047" />
-      <circle cx="50" cy="54" r="30"  fill="#f97316" />
-      <ellipse cx="50" cy="54" rx="48" ry="12" stroke="#fdba74" strokeWidth="7" />
+      {/* Antenna left */}
+      <line x1="38" y1="18" x2="22" y2="4" stroke="#f97316" strokeWidth="4" strokeLinecap="round" />
+      {/* Antenna right */}
+      <line x1="62" y1="18" x2="78" y2="4" stroke="#f97316" strokeWidth="4" strokeLinecap="round" />
+      {/* Body */}
+      <rect x="8" y="18" width="84" height="58" rx="10" fill="#f97316" />
+      {/* Screen */}
+      <rect x="16" y="25" width="62" height="40" rx="6" fill="#fed7aa" />
+      {/* Play triangle on screen */}
+      <polygon points="38,38 38,52 58,45" fill="#f97316" />
+      {/* Feet */}
+      <rect x="28" y="76" width="14" height="8" rx="3" fill="#c2410c" />
+      <rect x="58" y="76" width="14" height="8" rx="3" fill="#c2410c" />
     </svg>
   );
 }
 
-function Atom() {
+/** TV remote control */
+function Remote() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="50" cy="50" rx="44" ry="16" stroke="#8b5cf6" strokeWidth="2.5" />
-      <ellipse cx="50" cy="50" rx="44" ry="16" stroke="#8b5cf6" strokeWidth="2.5" transform="rotate(60 50 50)" />
-      <ellipse cx="50" cy="50" rx="44" ry="16" stroke="#8b5cf6" strokeWidth="2.5" transform="rotate(120 50 50)" />
-      <circle cx="50" cy="50" r="9" fill="#ec4899" />
-      <circle cx="94" cy="50" r="5.5" fill="#a78bfa" />
-      <circle cx="28" cy="75" r="5.5" fill="#a78bfa" />
-      <circle cx="28" cy="25" r="5.5" fill="#a78bfa" />
+      {/* Body */}
+      <rect x="30" y="5" width="40" height="90" rx="16" fill="#8b5cf6" />
+      {/* Power button */}
+      <circle cx="50" cy="26" r="9" fill="#a78bfa" />
+      <circle cx="50" cy="26" r="5" fill="#7c3aed" />
+      {/* D-pad */}
+      <rect x="43" y="44" width="14" height="6" rx="3" fill="#ddd6fe" />
+      <rect x="43" y="50" width="14" height="6" rx="3" fill="#ddd6fe" />
+      <rect x="43" y="44" width="6" height="12" rx="3" fill="#ddd6fe" />
+      <rect x="51" y="44" width="6" height="12" rx="3" fill="#ddd6fe" />
+      {/* Small buttons */}
+      <circle cx="42" cy="72" r="5" fill="#c4b5fd" />
+      <circle cx="58" cy="72" r="5" fill="#c4b5fd" />
+      <circle cx="42" cy="84" r="5" fill="#c4b5fd" />
+      <circle cx="58" cy="84" r="5" fill="#c4b5fd" />
     </svg>
   );
 }
 
-function Flask() {
+/** Popcorn bucket */
+function Popcorn() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="36" y="7" width="28" height="26" rx="4" fill="#0891b2" />
-      <path d="M36 32 L14 80 Q14 92 26 92 L74 92 Q86 92 86 80 L64 32 Z" fill="#06b6d4" />
-      <path d="M19 70 L14 80 Q14 92 26 92 L74 92 Q86 92 86 80 L81 70 Z" fill="#3b82f6" />
-      <circle cx="43" cy="73" r="5"   fill="white" opacity="0.55" />
-      <circle cx="62" cy="66" r="3.5" fill="white" opacity="0.5"  />
-      <circle cx="53" cy="81" r="3"   fill="white" opacity="0.45" />
+      {/* Bucket */}
+      <path d="M22 42 L30 92 L70 92 L78 42 Z" fill="#f97316" />
+      {/* Bucket stripes */}
+      <path d="M36 42 L40 92 L44 92 L40 42 Z" fill="#fed7aa" />
+      <path d="M56 42 L60 92 L64 92 L60 42 Z" fill="#fed7aa" />
+      {/* Popcorn pieces */}
+      <circle cx="34" cy="32" r="10" fill="#fef9c3" />
+      <circle cx="50" cy="26" r="11" fill="#fef9c3" />
+      <circle cx="66" cy="32" r="10" fill="#fef9c3" />
+      <circle cx="42" cy="38" r="9"  fill="#fef9c3" />
+      <circle cx="58" cy="38" r="9"  fill="#fef9c3" />
+      <circle cx="26" cy="38" r="8"  fill="#fffbeb" />
+      <circle cx="74" cy="38" r="8"  fill="#fffbeb" />
     </svg>
   );
 }
 
-function DinoFootprint() {
+/** Film clapper board */
+function Clapper() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Middle toe */}
-      <ellipse cx="50" cy="23" rx="11" ry="20" fill="#22c55e" />
-      {/* Left toe */}
-      <ellipse cx="50" cy="23" rx="11" ry="20" fill="#22c55e" transform="rotate(-48 50 23) translate(-26 18)" />
-      {/* Right toe */}
-      <ellipse cx="50" cy="23" rx="11" ry="20" fill="#22c55e" transform="rotate(48 50 23) translate(26 18)" />
-      {/* Palm */}
-      <ellipse cx="50" cy="68" rx="22" ry="16" fill="#16a34a" />
+      {/* Body */}
+      <rect x="8" y="30" width="84" height="62" rx="6" fill="#1e293b" />
+      {/* Top bar */}
+      <rect x="8" y="18" width="84" height="18" rx="4" fill="#334155" />
+      {/* Clapper stripes */}
+      <clipPath id="cp"><rect x="8" y="8" width="84" height="18" rx="4" /></clipPath>
+      <rect x="8"  y="8" width="84" height="18" rx="4" fill="#f1f5f9" />
+      <rect x="8"  y="8" width="18" height="18" fill="#1e293b" />
+      <rect x="44" y="8" width="18" height="18" fill="#1e293b" />
+      <rect x="80" y="8" width="12" height="18" fill="#1e293b" />
+      {/* Lines on body */}
+      <line x1="8"  y1="52" x2="92" y2="52" stroke="#475569" strokeWidth="2" />
+      <line x1="8"  y1="66" x2="92" y2="66" stroke="#475569" strokeWidth="2" />
+      <line x1="8"  y1="80" x2="92" y2="80" stroke="#475569" strokeWidth="2" />
     </svg>
   );
 }
 
-function LegoBrick() {
+/** Coin with dollar sign */
+function Coin() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Left stud cylinder + top cap */}
-      <rect x="15" y="22" width="28" height="20" rx="3" fill="#fb923c" />
-      <ellipse cx="29" cy="22" rx="14" ry="5.5" fill="#fdba74" />
-      {/* Right stud cylinder + top cap */}
-      <rect x="57" y="22" width="28" height="20" rx="3" fill="#fb923c" />
-      <ellipse cx="71" cy="22" rx="14" ry="5.5" fill="#fdba74" />
-      {/* Brick body */}
-      <rect x="8" y="38" width="84" height="46" rx="6" fill="#f97316" />
-      {/* Bottom edge shadow */}
-      <rect x="8" y="77" width="84" height="9" rx="4" fill="#c2410c" />
+      {/* Shadow */}
+      <circle cx="50" cy="54" r="38" fill="#d97706" />
+      {/* Face */}
+      <circle cx="50" cy="48" r="38" fill="#fbbf24" />
+      {/* Rim */}
+      <circle cx="50" cy="48" r="38" fill="none" stroke="#f59e0b" strokeWidth="4" />
+      {/* Dollar sign */}
+      <text x="50" y="62" textAnchor="middle" fontSize="44" fontWeight="bold" fill="#d97706" fontFamily="Georgia, serif">$</text>
     </svg>
   );
 }
 
-function Tools() {
+/** Five-pointed star */
+function Star() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Hammer handle */}
-      <rect x="46" y="36" width="11" height="55" rx="4.5" fill="#92400e" transform="rotate(-18 51.5 63.5)" />
-      {/* Hammer head */}
-      <rect x="18" y="16" width="52" height="21" rx="7" fill="#78716c" transform="rotate(-18 44 26.5)" />
-      {/* Wrench handle body */}
-      <rect x="43" y="36" width="11" height="50" rx="4.5" fill="#475569" transform="rotate(20 48.5 61)" />
-      {/* Wrench open end (ring) */}
-      <circle cx="74" cy="26" r="13" fill="#475569" />
-      <circle cx="74" cy="26" r="6.5" fill="#fff7ed" />
+      <polygon
+        points="50,6 61,35 92,35 68,54 77,83 50,65 23,83 32,54 8,35 39,35"
+        fill="#facc15"
+        stroke="#f59e0b"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function Telescope() {
+/** Clock face */
+function Clock() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Tube */}
-      <rect x="22" y="34" width="58" height="20" rx="9" fill="#8b5cf6" transform="rotate(-22 51 44)" />
-      {/* Eyepiece (narrow end) */}
-      <ellipse cx="28" cy="57" rx="9" ry="6" fill="#7c3aed" transform="rotate(-22 28 57)" />
-      {/* Objective lens (wide end) */}
-      <ellipse cx="76" cy="30" rx="14" ry="9" fill="#7c3aed" transform="rotate(-22 76 30)" />
-      {/* Tripod legs */}
-      <line x1="52" y1="64" x2="28" y2="92" stroke="#a16207" strokeWidth="5" strokeLinecap="round" />
-      <line x1="52" y1="64" x2="72" y2="92" stroke="#a16207" strokeWidth="5" strokeLinecap="round" />
-      <line x1="52" y1="64" x2="52" y2="93" stroke="#a16207" strokeWidth="5" strokeLinecap="round" />
+      {/* Shadow */}
+      <circle cx="50" cy="52" r="40" fill="#fb923c" />
+      {/* Face */}
+      <circle cx="50" cy="50" r="40" fill="#fff7ed" />
+      {/* Rim */}
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#f97316" strokeWidth="5" />
+      {/* Hour ticks */}
+      <line x1="50" y1="14" x2="50" y2="22" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+      <line x1="50" y1="78" x2="50" y2="86" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+      <line x1="14" y1="50" x2="22" y2="50" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+      <line x1="78" y1="50" x2="86" y2="50" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+      {/* Minute hand */}
+      <line x1="50" y1="50" x2="50" y2="20" stroke="#1e293b" strokeWidth="3.5" strokeLinecap="round" />
+      {/* Hour hand */}
+      <line x1="50" y1="50" x2="68" y2="50" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" />
+      {/* Centre dot */}
+      <circle cx="50" cy="50" r="4" fill="#f97316" />
     </svg>
   );
 }
 
-function StarCluster() {
+/** Play button (circle with triangle) */
+function PlayButton() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* 4-point star */}
-      <polygon points="50,8 56,42 90,50 56,58 50,92 44,58 10,50 44,42" fill="#facc15" />
-      <circle cx="18" cy="16" r="4" fill="#fde047" />
-      <circle cx="84" cy="12" r="3" fill="#fde047" />
-      <circle cx="88" cy="80" r="3.5" fill="#fde047" />
-      <circle cx="12" cy="78" r="3" fill="#fde047" />
+      {/* Shadow */}
+      <circle cx="50" cy="52" r="44" fill="#16a34a" />
+      {/* Face */}
+      <circle cx="50" cy="50" r="44" fill="#22c55e" />
+      {/* Triangle */}
+      <polygon points="38,30 38,70 74,50" fill="white" />
     </svg>
   );
 }
@@ -131,31 +170,31 @@ interface Item {
 
 const ITEMS: Item[] = [
   // Left edge
-  { Component: Planet,        size: 148, rotate: -12, pos: { left: '1%',   top: '2%'    } },
-  { Component: Flask,         size: 118, rotate:  -8, pos: { left: '0.5%', top: '42%'   } },
-  { Component: LegoBrick,     size: 142, rotate:  14, pos: { left: '1.5%', bottom: '5%' } },
+  { Component: TV,          size: 148, rotate: -12, pos: { left: '1%',   top: '2%'    } },
+  { Component: Popcorn,     size: 118, rotate:  -8, pos: { left: '0.5%', top: '42%'   } },
+  { Component: Coin,        size: 142, rotate:  14, pos: { left: '1.5%', bottom: '5%' } },
   // Right edge
-  { Component: Atom,          size: 130, rotate:  18, pos: { right: '1.5%',top: '3%'    } },
-  { Component: DinoFootprint, size: 132, rotate:   8, pos: { right: '1%',  top: '38%'   } },
-  { Component: Tools,         size: 128, rotate: -14, pos: { right: '1.5%',bottom: '4%' } },
-  { Component: Telescope,     size: 112, rotate: -20, pos: { right: '3.5%',top: '67%'   } },
+  { Component: Remote,      size: 130, rotate:  18, pos: { right: '1.5%',top: '3%'    } },
+  { Component: Clapper,     size: 132, rotate:   8, pos: { right: '1%',  top: '38%'   } },
+  { Component: Clock,       size: 128, rotate: -14, pos: { right: '1.5%',bottom: '4%' } },
+  { Component: PlayButton,  size: 112, rotate: -20, pos: { right: '3.5%',top: '67%'   } },
   // Top centre strip
-  { Component: StarCluster,   size:  88, rotate:   5, pos: { left: '22%',  top: '1%'    } },
-  { Component: LegoBrick,     size:  96, rotate: -10, pos: { left: '42%',  top: '0.5%'  } },
-  { Component: Flask,         size:  90, rotate:  16, pos: { right: '22%', top: '0.5%'  } },
+  { Component: Star,        size:  88, rotate:   5, pos: { left: '22%',  top: '1%'    } },
+  { Component: TV,          size:  96, rotate: -10, pos: { left: '42%',  top: '0.5%'  } },
+  { Component: Popcorn,     size:  90, rotate:  16, pos: { right: '22%', top: '0.5%'  } },
   // Mid-left band
-  { Component: DinoFootprint, size: 100, rotate: -15, pos: { left: '10%',  top: '24%'   } },
-  { Component: Telescope,     size:  96, rotate:  22, pos: { left: '8%',   top: '58%'   } },
+  { Component: Clapper,     size: 100, rotate: -15, pos: { left: '10%',  top: '24%'   } },
+  { Component: Remote,      size:  96, rotate:  22, pos: { left: '8%',   top: '58%'   } },
   // Centre column
-  { Component: Planet,        size: 110, rotate:  10, pos: { left: '44%',  top: '22%'   } },
-  { Component: Atom,          size: 104, rotate: -18, pos: { left: '46%',  top: '55%'   } },
+  { Component: Coin,        size: 110, rotate:  10, pos: { left: '44%',  top: '22%'   } },
+  { Component: Clock,       size: 104, rotate: -18, pos: { left: '46%',  top: '55%'   } },
   // Mid-right band
-  { Component: StarCluster,   size:  92, rotate:  -6, pos: { right: '10%', top: '22%'   } },
-  { Component: Tools,         size:  96, rotate:  12, pos: { right: '9%',  top: '57%'   } },
+  { Component: Star,        size:  92, rotate:  -6, pos: { right: '10%', top: '22%'   } },
+  { Component: PlayButton,  size:  96, rotate:  12, pos: { right: '9%',  top: '57%'   } },
   // Bottom centre strip
-  { Component: Atom,          size:  94, rotate:  -8, pos: { left: '23%',  bottom: '4%' } },
-  { Component: DinoFootprint, size: 100, rotate:  14, pos: { left: '44%',  bottom: '3%' } },
-  { Component: Planet,        size:  92, rotate:  -5, pos: { right: '23%', bottom: '4%' } },
+  { Component: Remote,      size:  94, rotate:  -8, pos: { left: '23%',  bottom: '4%' } },
+  { Component: Coin,        size: 100, rotate:  14, pos: { left: '44%',  bottom: '3%' } },
+  { Component: Star,        size:  92, rotate:  -5, pos: { right: '23%', bottom: '4%' } },
 ];
 
 export function BackgroundIllustrations() {
