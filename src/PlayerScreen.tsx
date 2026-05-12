@@ -274,13 +274,12 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
           pointerEvents: 'auto', zIndex: 50,
         }} onClick={(e) => e.preventDefault()} />
       )}
-      {/* Cover YouTube's "More videos" pill in the bottom-right.
-          Sized just over the pill, sits to the LEFT of the YouTube logo. */}
+      {/* Cover the entire YouTube control strip below the progress bar
+          (YT logo, "More videos" pill, and any other branding/links). */}
       <div aria-hidden style={{
-        position: 'absolute', right: 130, bottom: 8,
-        width: 170, height: 40,
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        height: 56,
         background: '#000',
-        borderRadius: 20,
         pointerEvents: 'auto', zIndex: 49,
       }} onClick={(e) => e.preventDefault()} />
       <WindDownBanner show={!!bannerText} text={bannerText} />

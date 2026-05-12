@@ -35,7 +35,7 @@ export function SignInScreen({ error }: SignInScreenProps) {
           window.location.href = buildAuthUrl();
         }}
       >
-        🔑 Sign in with YouTube
+        Sign in
       </Button>
       {error && (
         <div
