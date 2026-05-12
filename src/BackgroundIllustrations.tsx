@@ -179,6 +179,8 @@ const ITEMS: Item[] = [
   { Component: Molecule,      size:  96, rotate:  22, pos: { left: '8%',   top: '58%'   } },
   // Centre column
   { Component: TRex,          size: 110, rotate:  10, pos: { left: '44%',  top: '22%'   } },
+  { Component: Atom,          size: 100, rotate:  15, pos: { left: '32%',  top: '42%'   } },
+  { Component: LegoBrick,     size:  96, rotate:  -8, pos: { left: '58%',  top: '40%'   } },
   { Component: Flask,         size: 104, rotate: -18, pos: { left: '46%',  top: '55%'   } },
   // Mid-right band
   { Component: LegoHead,      size:  92, rotate:  -6, pos: { right: '10%', top: '22%'   } },
