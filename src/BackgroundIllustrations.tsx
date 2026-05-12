@@ -3,6 +3,7 @@
  * atoms/molecules, science experiments, dinosaurs, and Lego.
  * Fixed-position, pointer-events: none, low opacity so they never compete with content.
  */
+import { memo } from 'react';
 
 /** Atom: nucleus + three electron orbits */
 function Atom() {
@@ -191,7 +192,7 @@ const ITEMS: Item[] = [
   { Component: LegoBrick,     size:  92, rotate:  -5, pos: { right: '23%', bottom: '4%' } },
 ];
 
-export function BackgroundIllustrations() {
+function BackgroundIllustrationsImpl() {
   return (
     <div
       aria-hidden
@@ -221,3 +222,7 @@ export function BackgroundIllustrations() {
     </div>
   );
 }
+
+// Memoized: re-renders triggered by per-second budget ticks should not walk
+// 12 inline SVGs again. Props are empty so memo() is always a hit.
+export const BackgroundIllustrations = memo(BackgroundIllustrationsImpl);

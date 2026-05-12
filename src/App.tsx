@@ -74,8 +74,11 @@ export default function App() {
 
   return (
     <>
-      <BackgroundIllustrations />
-      <TimerOverlay remainingSeconds={budgetCtl.remaining} />
+      {/* Skip background + timer overlay on the player route: the iframe
+          fully covers them, and avoiding the per-second re-render of these
+          fixed-position overlays meaningfully improves video smoothness on TV. */}
+      {!onPlayer && <BackgroundIllustrations />}
+      {!onPlayer && <TimerOverlay remainingSeconds={budgetCtl.remaining} />}
       <FiveMinuteWarning trigger={budgetCtl.fiveMinuteWarning} />
       {!onPlayer && (
         <AccountBadge

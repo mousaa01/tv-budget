@@ -282,12 +282,12 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
         background: 'transparent',
         pointerEvents: 'auto', zIndex: 49,
       }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
-      {/* Transparent click-shield over the bottom half of the screen — on TV
-          the YouTube "More videos" rail can extend well above the control bar,
-          so we block clicks across the whole lower half (still see-through). */}
+      {/* Transparent click-shield over the bottom region — covers YouTube's
+          control bar and "More videos" rail. Kept under 40% to avoid forcing
+          a large transparent compositing layer over the video on slower TVs. */}
       <div aria-hidden style={{
         position: 'absolute', left: 0, right: 0, bottom: 0,
-        height: '50%',
+        height: '35%',
         background: 'transparent',
         pointerEvents: 'auto', zIndex: 49,
       }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
