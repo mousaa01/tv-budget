@@ -252,6 +252,13 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
           pointerEvents: 'auto', zIndex: 50,
         }} onClick={(e) => e.preventDefault()} />
       )}
+      {/* Permanent mask over YouTube's "More videos" pill in the bottom-right corner. */}
+      <div aria-hidden style={{
+        position: 'absolute', right: 0, bottom: 0,
+        width: 220, height: 80,
+        background: '#000',
+        pointerEvents: 'auto', zIndex: 49,
+      }} onClick={(e) => e.preventDefault()} />
       <WindDownBanner show={!!bannerText} text={bannerText} />
     </div>
   );

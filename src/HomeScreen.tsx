@@ -1,7 +1,7 @@
 import { setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, LoadingDots } from './components';
+import { LoadingDots } from './components';
 import { formatMMSS, formatHMS } from './format';
 import { loadRecent, loadSubscribedChannels } from './storage';
 import type { RecentVideo, SubscribedChannel } from './types';
@@ -133,10 +133,9 @@ function RecentButton({ video, disabled, onPress }: { video: RecentVideo; disabl
 
 interface HomeProps {
   budgetCtl: UseBudget;
-  onOpenSettings: () => void;
 }
 
-export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
+export function HomeScreen({ budgetCtl }: HomeProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -201,12 +200,9 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
           <p className="t-h2" style={{ color: 'var(--text-dim)', marginTop: 'var(--space-2)' }}>
             {budgetCtl.noNewVideos
               ? "🎈 You're all done for today — come back tomorrow!"
-              : `⏰ ${remainingLabel} of fun left today!`}
+              : `⏰ ${remainingLabel} left today!`}
           </p>
         </div>
-        <Button variant="secondary" onClick={onOpenSettings} style={{ flexShrink: 0 }}>
-          ⚙ Settings
-        </Button>
       </header>
 
       {/* Search row.
@@ -224,7 +220,12 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') {
+              if (e.key === 'Enter') {
+                // Spatial-nav swallows Enter as "OK" — handle submit ourselves.
+                e.preventDefault();
+                e.stopPropagation();
+                onSubmit(e as unknown as React.FormEvent);
+              } else if (e.key === 'Escape') {
                 e.preventDefault();
                 setSearching(false);
               } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {

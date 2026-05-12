@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BackgroundIllustrations } from './BackgroundIllustrations';
-import { TimerOverlay } from './components';
+import { Button, TimerOverlay } from './components';
 import { HomeScreen } from './HomeScreen';
-import { fetchSubscribedChannels, fetchUserProfile, parseTokenFromHash } from './oauth';
+import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, parseTokenFromHash } from './oauth';
 import { PlayerScreen } from './PlayerScreen';
-import { loadSubscribedChannels, saveSubscribedChannels } from './storage';
+import { clearSubscribedChannels, loadSubscribedChannels, saveSubscribedChannels } from './storage';
 import { SearchScreen } from './SearchScreen';
 import { SettingsModal } from './SettingsModal';
 import { SignInScreen, AccountBadge } from './SignInScreen';
@@ -79,8 +79,21 @@ export default function App() {
         <AccountBadge
           name={auth.profile?.name ?? 'Signed in'}
           avatar={auth.profile?.avatar ?? ''}
-          onClick={() => setSettingsOpen(true)}
+          onClick={() => {
+            // Switch account: clear current auth and re-launch OAuth flow.
+            const ok = window.confirm(`Sign out of ${auth.profile?.name ?? 'this account'} and switch to a different YouTube account?`);
+            if (!ok) return;
+            clearSubscribedChannels();
+            window.location.href = buildAuthUrl();
+          }}
         />
+      )}
+      {!onPlayer && (
+        <div style={{ position: 'fixed', right: 'var(--space-4)', bottom: 'var(--space-4)', zIndex: 100 }}>
+          <Button variant="secondary" onClick={() => setSettingsOpen(true)}>
+            ⚙ Settings
+          </Button>
+        </div>
       )}
 
       <Routes>
@@ -89,7 +102,6 @@ export default function App() {
           element={
             <HomeScreen
               budgetCtl={budgetCtl}
-              onOpenSettings={() => setSettingsOpen(true)}
             />
           }
         />
