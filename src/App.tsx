@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { BackgroundIllustrations } from './BackgroundIllustrations';
 import { TimerOverlay } from './components';
 import { HomeScreen } from './HomeScreen';
 import { fetchSubscribedChannels, fetchUserProfile, parseTokenFromHash } from './oauth';
@@ -72,16 +73,8 @@ export default function App() {
 
   return (
     <>
+      <BackgroundIllustrations />
       <TimerOverlay remainingSeconds={budgetCtl.remaining} />
-      {/* Version badge — always visible so we can confirm which build is running on TV */}
-      <div style={{
-        position: 'fixed', bottom: 8, right: 12, zIndex: 9999,
-        fontSize: 11, color: 'rgba(255,255,255,0.55)', pointerEvents: 'none',
-        fontFamily: 'monospace', background: 'rgba(0,0,0,0.35)', borderRadius: 4,
-        padding: '2px 6px', lineHeight: 1.4,
-      }}>
-        v{__APP_VERSION__} · {new Date(__BUILD_TIME__).toLocaleString()}
-      </div>
       {!onPlayer && (
         <AccountBadge
           name={auth.profile?.name ?? 'Signed in'}

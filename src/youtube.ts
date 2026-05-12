@@ -119,6 +119,8 @@ export function applyBlocklist(results: VideoResult[], keywords: string[]): Vide
   });
 }
 
+const MIN_VIDEO_SECONDS = 120; // filter out videos shorter than 2 minutes
+
 export function partitionByDuration(
   results: VideoResult[],
   remainingSeconds: number
@@ -126,6 +128,7 @@ export function partitionByDuration(
   const fits: VideoResult[] = [];
   const tooLong: VideoResult[] = [];
   for (const r of results) {
+    if (r.durationSeconds > 0 && r.durationSeconds < MIN_VIDEO_SECONDS) continue;
     if (r.durationSeconds > 0 && r.durationSeconds <= remainingSeconds) fits.push(r);
     else tooLong.push(r);
   }

@@ -68,36 +68,22 @@ button {
   appearance: none;
 }
 
-/* Focus — INVERT the button. Dark navy background + white text + bright yellow ring.
-   Impossible to miss against any palette. No transforms (they break rect-based nav).
-   Both [data-focusable].focused AND button.focused cover all code paths on Tizen WebKit. */
-button:focus,
+/* Focus — clean accent ring. No color inversions. TV still works via .focused class. */
 button:focus-visible,
 button.focused,
-a:focus,
-[data-focusable]:focus,
+a:focus-visible,
+[data-focusable]:focus-visible,
 [data-focusable].focused {
-  background: #0f172a !important;       /* deep navy */
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  background-image: none !important;
-  color: #ffffff !important;
-  border-color: #fde047 !important;     /* bright yellow */
-  outline: 6px solid #fde047 !important;
-  -webkit-outline: 6px solid #fde047 !important;
+  outline: 2.5px solid var(--accent);
   outline-offset: 2px;
-  box-shadow:
-    0 0 0 4px #0f172a,
-    0 0 0 12px #fde047,
-    0 8px 32px 6px rgba(253, 224, 71, 0.65) !important;
+  box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.18);
 }
-/* Inputs keep their normal look but with the bright ring */
-input:focus, textarea:focus {
-  outline: 6px solid #fde047 !important;
+/* Inputs keep their normal look with the accent ring */
+input:focus-visible, textarea:focus-visible {
+  outline: 2.5px solid var(--accent);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px #0f172a, 0 0 0 12px #fde047 !important;
 }
-iframe:focus { outline: none !important; box-shadow: none !important; background: transparent !important; }
+iframe:focus { outline: none !important; box-shadow: none !important; }
 
 /* iframe focus ring reset — the YouTube iframe itself should never show a focus outline */
 iframe { border: none; }

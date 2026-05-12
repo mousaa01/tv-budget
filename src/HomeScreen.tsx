@@ -251,31 +251,10 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
 
       {/* Subscribed channels row — always shown if signed in */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        <h2 className="t-h2" style={{ color: 'var(--accent-3)' }}>
-          ⭐ Your channels {channels.length > 0 && `(${channels.length})`}
-        </h2>
+        <h2 className="t-h2" style={{ color: 'var(--accent-3)' }}>Your channels</h2>
         {channels.length === 0 ? (
-          <div
-            style={{
-              padding: 'var(--space-3)',
-              background: 'rgba(245,158,11,0.12)',
-              border: '2px solid rgba(245,158,11,0.4)',
-              borderRadius: 'var(--radius-md)',
-              color: '#92400e',
-              fontSize: 18,
-              lineHeight: 1.5,
-            }}
-          >
-            <strong>No channels imported yet.</strong> If you just signed in and expected to see
-            channels here, check the browser console (F12) for errors. Common causes:
-            <ul style={{ marginTop: 8, paddingLeft: 24 }}>
-              <li>Subscriptions are private (YouTube → Settings → Privacy)</li>
-              <li>The YouTube readonly scope was unchecked during sign-in</li>
-              <li>The signed-in account has no subscriptions</li>
-            </ul>
-            <div style={{ marginTop: 12 }}>
-              Open Settings → YouTube account → Refresh subscriptions to retry, or Disconnect to sign in again.
-            </div>
+          <div className="t-meta" style={{ padding: 'var(--space-1) 0', color: 'var(--text-faint)' }}>
+            No subscribed channels found.
           </div>
         ) : (
           <div
@@ -299,10 +278,8 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
       </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        <h2 className="t-h2" style={{ color: 'var(--accent)' }}>▶ Recently watched 🎥</h2>
-        {recent.length === 0 ? (
-          <div className="t-meta">Search for something to watch above ☝</div>
-        ) : (
+        <h2 className="t-h2" style={{ color: 'var(--accent)' }}>Recently watched</h2>
+        {recent.length === 0 ? null : (
           <div
             className="scroll-list"
             style={{
@@ -326,12 +303,6 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
           </div>
         )}
       </section>
-
-      <footer style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
-        <Button variant="secondary" onClick={onOpenSettings}>
-          ⚙ Settings
-        </Button>
-      </footer>
     </div>
   );
 }

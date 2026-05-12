@@ -1,4 +1,4 @@
-import { setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+﻿import { setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, LoadingDots, VideoCard } from './components';
@@ -32,7 +32,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     setSubscribedSet(new Set(subscribed?.channels.map((c) => c.id) ?? []));
 
     // Only fan-out per channel for the small manual allowlist.
-    // Subscriptions are used for badging only — not filtering — to avoid
+    // Subscriptions are used for badging only â€” not filtering â€” to avoid
     // burning 1 quota unit per subscribed channel on every search.
     searchVideos(query, {
       channelIds: settings.channelAllowlist.length > 0 ? settings.channelAllowlist : undefined,
@@ -83,29 +83,21 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     >
       <header style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
         <Button id="SEARCH_BACK" variant="secondary" onClick={() => navigate('/')}>
-          ← Back
+          â† Back
         </Button>
-        <div>
-          <div className="t-meta">Showing results for</div>
-          <div className="t-h1">{query}</div>
-        </div>
+        <div className="t-h1">{query}</div>
       </header>
 
       <main className="scroll-list" style={{ flex: 1, minHeight: 0, paddingRight: 'var(--space-2)' }}>
         {loading && <LoadingDots />}
         {error && (
           <div style={{ color: 'var(--danger)', padding: 'var(--space-3)' }}>
-            Couldn't search: {error}
-            <div className="t-meta" style={{ marginTop: 'var(--space-2)' }}>
-              Make sure VITE_YT_API_KEY is set in your .env file.
-            </div>
+            Couldnâ€™t search â€” try again.
           </div>
         )}
 
-        {!loading && !error && fits.length === 0 && tooLong.length === 0 && (
-          <div className="t-body">
-            No videos found that fit in your time. Try a shorter search?
-          </div>
+        {!loading && !error && fits.length === 0 && (
+          <div className="t-body">No results for â€œ{query}â€.</div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
@@ -122,36 +114,6 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
             />
           ))}
         </div>
-
-        {tooLong.length > 0 && (
-          <>
-            <div
-              className="t-meta"
-              style={{
-                borderTop: '2px solid var(--border)',
-                marginTop: 'var(--space-4)',
-                paddingTop: 'var(--space-3)',
-              }}
-            >
-              Too long for today
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              {tooLong.map((v) => (
-                <VideoCard
-                  key={v.id}
-                  thumbnail={v.thumbnail}
-                  title={v.title}
-                  channel={v.channelTitle}
-                  durationLabel={formatMMSS(v.durationSeconds)}
-                  isSubscribed={subscribedSet.has(v.channelId)}
-                  fits={false}
-                  disabled
-                  onSelect={() => undefined}
-                />
-              ))}
-            </div>
-          </>
-        )}
       </main>
     </div>
   );
