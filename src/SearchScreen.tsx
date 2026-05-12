@@ -132,7 +132,18 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <div
+          style={
+            isChannelMode
+              ? {
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 'var(--space-2)',
+                  alignItems: 'start',
+                }
+              : { display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }
+          }
+        >
           {fits.map((v) => (
             <VideoCard
               key={v.id}
@@ -142,11 +153,12 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               durationLabel={formatMMSS(v.durationSeconds)}
               fits
               isSubscribed={subscribedSet.has(v.channelId)}
+              layout={isChannelMode ? 'grid' : 'list'}
               onSelect={() => navigate(`/play/${v.id}?d=${v.durationSeconds}&title=${encodeURIComponent(v.title)}&channel=${encodeURIComponent(v.channelTitle)}`)}
             />
           ))}
           {isChannelMode && nextPageToken && !loading && (
-            <div style={{ padding: 'var(--space-3) 0', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ gridColumn: '1 / -1', padding: 'var(--space-3) 0', display: 'flex', justifyContent: 'center' }}>
               <Button variant="secondary" onClick={loadMore}>
                 {loadingMore ? 'Loading…' : 'Load more videos'}
               </Button>

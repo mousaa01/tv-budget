@@ -1,6 +1,6 @@
 import { FocusContext, setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import type { ReactNode, ButtonHTMLAttributes } from 'react';
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { formatHMS, formatMMSS } from './format';
 
 /* ---------------- Button ---------------- */
@@ -187,21 +187,70 @@ interface VideoCardProps {
   isSubscribed?: boolean;
   onSelect: () => void;
   disabled?: boolean;
+  layout?: 'list' | 'grid';
 }
 
-export function VideoCard({
+export const VideoCard = memo(function VideoCard({
   thumbnail,
   title,
   channel,
   durationLabel,
   fits,
-  isSubscribed,
   onSelect,
   disabled,
+  layout = 'list',
 }: VideoCardProps) {
   const { ref, focused } = useFocusable({
     onEnterPress: disabled ? undefined : () => (ref.current as HTMLButtonElement | null)?.click(),
   });
+
+  if (layout === 'grid') {
+    return (
+      <button
+        ref={disabled ? undefined : (ref as React.Ref<HTMLButtonElement>)}
+        data-focusable={!disabled || undefined}
+        className={focused && !disabled ? 'focused' : undefined}
+        disabled={disabled}
+        onClick={onSelect}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          width: '100%',
+          textAlign: 'left',
+          background: 'var(--surface)',
+          border: '2px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          padding: 10,
+          opacity: disabled ? 0.45 : 1,
+        }}
+      >
+        <div style={{
+          position: 'relative', width: '100%', aspectRatio: '16/9',
+          borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: 'var(--surface-2)',
+        }}>
+          <img src={thumbnail} alt="" loading="lazy" decoding="async"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <span className="tabular" style={{
+            position: 'absolute', right: 6, bottom: 6,
+            background: 'rgba(0,0,0,0.78)', color: '#fff',
+            fontSize: 16, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+          }}>
+            {durationLabel}
+          </span>
+        </div>
+        <div style={{
+          fontSize: 18, fontWeight: 700, color: 'var(--text)',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          overflow: 'hidden', lineHeight: 1.25,
+        }}>
+          {title}
+        </div>
+        <div className="t-meta">{channel}</div>
+        {!fits && <Pill color="blocked">✕ too long for today</Pill>}
+      </button>
+    );
+  }
 
   return (
     <button
@@ -238,6 +287,7 @@ export function VideoCard({
           src={thumbnail}
           alt=""
           loading="lazy"
+          decoding="async"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
         <span
@@ -272,14 +322,15 @@ export function VideoCard({
           {title}
         </div>
         <div className="t-meta">{channel}</div>
-        <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {isSubscribed && <Pill color="ok">★ Subscribed</Pill>}
-          {!fits && <Pill color="blocked">✕ too long for today</Pill>}
-        </div>
+        {!fits && (
+          <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <Pill color="blocked">✕ too long for today</Pill>
+          </div>
+        )}
       </div>
     </button>
   );
-}
+});
 
 /* ---------------- Modal ---------------- */
 

@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BackgroundIllustrations } from './BackgroundIllustrations';
-import { Button, TimerOverlay } from './components';
+import { Button, LoadingDots, TimerOverlay } from './components';
 import { HomeScreen } from './HomeScreen';
 import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, parseTokenFromHash } from './oauth';
-import { PlayerScreen } from './PlayerScreen';
 import { clearSubscribedChannels, loadSubscribedChannels, saveSubscribedChannels } from './storage';
-import { SearchScreen } from './SearchScreen';
-import { SettingsModal } from './SettingsModal';
 import { SignInScreen, AccountBadge } from './SignInScreen';
 import { TimesUpScreen } from './TimesUpScreen';
 import type { SubscribedChannelsMeta } from './types';
 import { useBudget } from './useBudget';
+
+const PlayerScreen = lazy(() => import('./PlayerScreen').then((m) => ({ default: m.PlayerScreen })));
+const SearchScreen = lazy(() => import('./SearchScreen').then((m) => ({ default: m.SearchScreen })));
+const SettingsModal = lazy(() => import('./SettingsModal').then((m) => ({ default: m.SettingsModal })));
 
 export default function App() {
   const budgetCtl = useBudget();
@@ -105,20 +106,38 @@ export default function App() {
             />
           }
         />
-        <Route path="/search" element={<SearchScreen budgetCtl={budgetCtl} />} />
-        <Route path="/play/:videoId" element={<PlayerScreen budgetCtl={budgetCtl} />} />
+        <Route
+          path="/search"
+          element={
+            <Suspense fallback={<LoadingDots />}>
+              <SearchScreen budgetCtl={budgetCtl} />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/play/:videoId"
+          element={
+            <Suspense fallback={<LoadingDots />}>
+              <PlayerScreen budgetCtl={budgetCtl} />
+            </Suspense>
+          }
+        />
         <Route path="/timesup" element={<TimesUpScreen budgetCtl={budgetCtl} />} />
       </Routes>
 
-      <SettingsModal
-        open={settingsOpen}
-        onClose={() => {
-          setSettingsOpen(false);
-          // Refresh auth state from storage in case user disconnected
-          setAuth(loadSubscribedChannels());
-        }}
-        budgetCtl={budgetCtl}
-      />
+      {settingsOpen && (
+        <Suspense fallback={null}>
+          <SettingsModal
+            open={settingsOpen}
+            onClose={() => {
+              setSettingsOpen(false);
+              // Refresh auth state from storage in case user disconnected
+              setAuth(loadSubscribedChannels());
+            }}
+            budgetCtl={budgetCtl}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

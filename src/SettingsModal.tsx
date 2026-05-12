@@ -19,6 +19,7 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
   const [blocklistInput, setBlocklistInput] = useState('');
   const [savedToast, setSavedToast] = useState(false);
+  const [pinRevealed, setPinRevealed] = useState(false);
   const [subscriptions, setSubscriptions] = useState<SubscribedChannelsMeta | null>(() => loadSubscribedChannels());
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -276,25 +277,32 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
           {/* Change PIN */}
           <section>
             <h3 className="t-h2">PIN</h3>
-            <input
-              data-focusable
-              type="text"
-              inputMode="numeric"
-              value={settings.pin}
-              onChange={(e) => setSettings({ ...settings, pin: e.target.value })}
-              style={{
-                width: 200,
-                height: 64,
-                padding: '0 var(--space-2)',
-                background: 'var(--surface)',
-                border: '2px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text)',
-                fontSize: 28,
-                letterSpacing: 6,
-                textAlign: 'center',
-              }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+              <input
+                data-focusable
+                type={pinRevealed ? 'text' : 'password'}
+                inputMode="numeric"
+                value={settings.pin}
+                onChange={(e) => setSettings({ ...settings, pin: e.target.value })}
+                readOnly={!pinRevealed}
+                aria-label="Parent PIN"
+                style={{
+                  width: 200,
+                  height: 64,
+                  padding: '0 var(--space-2)',
+                  background: 'var(--surface)',
+                  border: '2px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text)',
+                  fontSize: 28,
+                  letterSpacing: 6,
+                  textAlign: 'center',
+                }}
+              />
+              <Button variant="secondary" onClick={() => setPinRevealed((v) => !v)}>
+                {pinRevealed ? 'Hide' : 'Show / Change'}
+              </Button>
+            </div>
           </section>
 
           {/* History */}

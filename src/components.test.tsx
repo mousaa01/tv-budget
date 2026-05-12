@@ -63,13 +63,8 @@ describe('VideoCard', () => {
     expect(screen.getByText('✕ too long for today')).toBeInTheDocument();
   });
 
-  it('shows subscribed badge when isSubscribed=true', () => {
+  it('never shows subscribed badge (feature removed)', () => {
     render(<VideoCard {...VIDEO_PROPS} isSubscribed onSelect={vi.fn()} />);
-    expect(screen.getByText('★ Subscribed')).toBeInTheDocument();
-  });
-
-  it('does not show subscribed badge when isSubscribed=false', () => {
-    render(<VideoCard {...VIDEO_PROPS} isSubscribed={false} onSelect={vi.fn()} />);
     expect(screen.queryByText('★ Subscribed')).toBeNull();
   });
 });
