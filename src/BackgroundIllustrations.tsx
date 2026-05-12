@@ -1,162 +1,154 @@
 /**
- * Decorative background illustrations scattered across the app.
- * Flat, friendly SVG icons themed around TV watching and budgeting.
+ * Decorative background illustrations themed around Adam's interests:
+ * atoms/molecules, science experiments, dinosaurs, and Lego.
  * Fixed-position, pointer-events: none, low opacity so they never compete with content.
  */
 
-/** Classic CRT-style TV with antenna */
-function TV() {
+/** Atom: nucleus + three electron orbits */
+function Atom() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Antenna left */}
-      <line x1="38" y1="18" x2="22" y2="4" stroke="#f97316" strokeWidth="4" strokeLinecap="round" />
-      {/* Antenna right */}
-      <line x1="62" y1="18" x2="78" y2="4" stroke="#f97316" strokeWidth="4" strokeLinecap="round" />
+      <ellipse cx="50" cy="50" rx="46" ry="16" stroke="#8b5cf6" strokeWidth="3" />
+      <ellipse cx="50" cy="50" rx="46" ry="16" stroke="#8b5cf6" strokeWidth="3" transform="rotate(60 50 50)" />
+      <ellipse cx="50" cy="50" rx="46" ry="16" stroke="#8b5cf6" strokeWidth="3" transform="rotate(120 50 50)" />
+      {/* Nucleus */}
+      <circle cx="50" cy="50" r="10" fill="#ec4899" />
+      {/* Electrons */}
+      <circle cx="96" cy="50" r="5" fill="#a78bfa" />
+      <circle cx="27" cy="76" r="5" fill="#a78bfa" />
+      <circle cx="27" cy="24" r="5" fill="#a78bfa" />
+    </svg>
+  );
+}
+
+/** Molecule: three connected circles (H2O style) */
+function Molecule() {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Bonds */}
+      <line x1="50" y1="50" x2="20" y2="75" stroke="#6366f1" strokeWidth="5" strokeLinecap="round" />
+      <line x1="50" y1="50" x2="80" y2="75" stroke="#6366f1" strokeWidth="5" strokeLinecap="round" />
+      <line x1="50" y1="50" x2="50" y2="16" stroke="#6366f1" strokeWidth="5" strokeLinecap="round" />
+      {/* Atoms */}
+      <circle cx="50" cy="50" r="16" fill="#f97316" />
+      <circle cx="20" cy="75" r="12" fill="#60a5fa" />
+      <circle cx="80" cy="75" r="12" fill="#60a5fa" />
+      <circle cx="50" cy="16" r="12" fill="#34d399" />
+    </svg>
+  );
+}
+
+/** Science flask / erlenmeyer */
+function Flask() {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Neck */}
+      <rect x="36" y="6" width="28" height="26" rx="5" fill="#0891b2" />
       {/* Body */}
-      <rect x="8" y="18" width="84" height="58" rx="10" fill="#f97316" />
-      {/* Screen */}
-      <rect x="16" y="25" width="62" height="40" rx="6" fill="#fed7aa" />
-      {/* Play triangle on screen */}
-      <polygon points="38,38 38,52 58,45" fill="#f97316" />
-      {/* Feet */}
-      <rect x="28" y="76" width="14" height="8" rx="3" fill="#c2410c" />
-      <rect x="58" y="76" width="14" height="8" rx="3" fill="#c2410c" />
+      <path d="M36 32 L12 82 Q12 93 26 93 L74 93 Q88 93 88 82 L64 32 Z" fill="#06b6d4" />
+      {/* Liquid level */}
+      <path d="M16 72 L12 82 Q12 93 26 93 L74 93 Q88 93 88 82 L84 72 Z" fill="#0e7490" />
+      {/* Bubbles */}
+      <circle cx="42" cy="76" r="5"   fill="white" opacity="0.5" />
+      <circle cx="61" cy="68" r="4"   fill="white" opacity="0.45" />
+      <circle cx="52" cy="84" r="3.5" fill="white" opacity="0.4" />
     </svg>
   );
 }
 
-/** TV remote control */
-function Remote() {
+/** Test tube with liquid */
+function TestTube() {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Tube body */}
+      <rect x="38" y="8" width="24" height="70" rx="12" fill="#a3e635" />
+      {/* Liquid fill */}
+      <rect x="38" y="46" width="24" height="32" rx="0" fill="#65a30d" />
+      <rect x="38" y="66" width="24" height="12" rx="12" fill="#65a30d" />
+      {/* Bubble */}
+      <circle cx="50" cy="60" r="5" fill="white" opacity="0.45" />
+      {/* Stopper */}
+      <rect x="34" y="4" width="32" height="10" rx="4" fill="#713f12" />
+    </svg>
+  );
+}
+
+/** Dinosaur footprint: three toes + heel pad */
+function DinoFootprint() {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Toe 1 – centre */}
+      <ellipse cx="50" cy="22" rx="9" ry="18" fill="#16a34a" />
+      {/* Toe 2 – left */}
+      <ellipse cx="28" cy="32" rx="9" ry="17" fill="#16a34a" transform="rotate(-35 28 32)" />
+      {/* Toe 3 – right */}
+      <ellipse cx="72" cy="32" rx="9" ry="17" fill="#16a34a" transform="rotate(35 72 32)" />
+      {/* Heel pad */}
+      <ellipse cx="50" cy="72" rx="20" ry="14" fill="#15803d" />
+    </svg>
+  );
+}
+
+/** T-Rex side silhouette (simple blocky) */
+function TRex() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Body */}
-      <rect x="30" y="5" width="40" height="90" rx="16" fill="#8b5cf6" />
-      {/* Power button */}
-      <circle cx="50" cy="26" r="9" fill="#a78bfa" />
-      <circle cx="50" cy="26" r="5" fill="#7c3aed" />
-      {/* D-pad */}
-      <rect x="43" y="44" width="14" height="6" rx="3" fill="#ddd6fe" />
-      <rect x="43" y="50" width="14" height="6" rx="3" fill="#ddd6fe" />
-      <rect x="43" y="44" width="6" height="12" rx="3" fill="#ddd6fe" />
-      <rect x="51" y="44" width="6" height="12" rx="3" fill="#ddd6fe" />
-      {/* Small buttons */}
-      <circle cx="42" cy="72" r="5" fill="#c4b5fd" />
-      <circle cx="58" cy="72" r="5" fill="#c4b5fd" />
-      <circle cx="42" cy="84" r="5" fill="#c4b5fd" />
-      <circle cx="58" cy="84" r="5" fill="#c4b5fd" />
+      <ellipse cx="52" cy="58" rx="26" ry="18" fill="#22c55e" />
+      {/* Head */}
+      <ellipse cx="82" cy="38" rx="18" ry="12" fill="#22c55e" />
+      {/* Snout / jaw */}
+      <rect x="72" y="44" width="28" height="8" rx="4" fill="#16a34a" />
+      {/* Eye */}
+      <circle cx="87" cy="34" r="3" fill="white" />
+      <circle cx="88" cy="34" r="1.5" fill="#1e293b" />
+      {/* Tiny arm */}
+      <line x1="66" y1="52" x2="72" y2="62" stroke="#16a34a" strokeWidth="5" strokeLinecap="round" />
+      {/* Tail */}
+      <path d="M26 60 Q6 66 4 78" stroke="#22c55e" strokeWidth="10" strokeLinecap="round" fill="none" />
+      {/* Legs */}
+      <rect x="44" y="72" width="12" height="20" rx="5" fill="#16a34a" />
+      <rect x="58" y="72" width="12" height="20" rx="5" fill="#16a34a" />
     </svg>
   );
 }
 
-/** Popcorn bucket */
-function Popcorn() {
+/** Lego 2×2 brick */
+function LegoBrick() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Bucket */}
-      <path d="M22 42 L30 92 L70 92 L78 42 Z" fill="#f97316" />
-      {/* Bucket stripes */}
-      <path d="M36 42 L40 92 L44 92 L40 42 Z" fill="#fed7aa" />
-      <path d="M56 42 L60 92 L64 92 L60 42 Z" fill="#fed7aa" />
-      {/* Popcorn pieces */}
-      <circle cx="34" cy="32" r="10" fill="#fef9c3" />
-      <circle cx="50" cy="26" r="11" fill="#fef9c3" />
-      <circle cx="66" cy="32" r="10" fill="#fef9c3" />
-      <circle cx="42" cy="38" r="9"  fill="#fef9c3" />
-      <circle cx="58" cy="38" r="9"  fill="#fef9c3" />
-      <circle cx="26" cy="38" r="8"  fill="#fffbeb" />
-      <circle cx="74" cy="38" r="8"  fill="#fffbeb" />
+      {/* Left stud */}
+      <ellipse cx="31" cy="26" rx="13" ry="5" fill="#fdba74" />
+      <rect x="18" y="26" width="26" height="14" rx="2" fill="#fb923c" />
+      {/* Right stud */}
+      <ellipse cx="69" cy="26" rx="13" ry="5" fill="#fdba74" />
+      <rect x="56" y="26" width="26" height="14" rx="2" fill="#fb923c" />
+      {/* Brick body */}
+      <rect x="8" y="38" width="84" height="46" rx="7" fill="#f97316" />
+      {/* Bottom shadow strip */}
+      <rect x="8" y="76" width="84" height="8" rx="4" fill="#c2410c" />
     </svg>
   );
 }
 
-/** Film clapper board */
-function Clapper() {
+/** Lego minifig head (round, smiley) */
+function LegoHead() {
   return (
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Body */}
-      <rect x="8" y="30" width="84" height="62" rx="6" fill="#1e293b" />
-      {/* Top bar */}
-      <rect x="8" y="18" width="84" height="18" rx="4" fill="#334155" />
-      {/* Clapper stripes */}
-      <clipPath id="cp"><rect x="8" y="8" width="84" height="18" rx="4" /></clipPath>
-      <rect x="8"  y="8" width="84" height="18" rx="4" fill="#f1f5f9" />
-      <rect x="8"  y="8" width="18" height="18" fill="#1e293b" />
-      <rect x="44" y="8" width="18" height="18" fill="#1e293b" />
-      <rect x="80" y="8" width="12" height="18" fill="#1e293b" />
-      {/* Lines on body */}
-      <line x1="8"  y1="52" x2="92" y2="52" stroke="#475569" strokeWidth="2" />
-      <line x1="8"  y1="66" x2="92" y2="66" stroke="#475569" strokeWidth="2" />
-      <line x1="8"  y1="80" x2="92" y2="80" stroke="#475569" strokeWidth="2" />
-    </svg>
-  );
-}
-
-/** Coin with dollar sign */
-function Coin() {
-  return (
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Shadow */}
-      <circle cx="50" cy="54" r="38" fill="#d97706" />
-      {/* Face */}
-      <circle cx="50" cy="48" r="38" fill="#fbbf24" />
-      {/* Rim */}
-      <circle cx="50" cy="48" r="38" fill="none" stroke="#f59e0b" strokeWidth="4" />
-      {/* Dollar sign */}
-      <text x="50" y="62" textAnchor="middle" fontSize="44" fontWeight="bold" fill="#d97706" fontFamily="Georgia, serif">$</text>
-    </svg>
-  );
-}
-
-/** Five-pointed star */
-function Star() {
-  return (
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <polygon
-        points="50,6 61,35 92,35 68,54 77,83 50,65 23,83 32,54 8,35 39,35"
-        fill="#facc15"
-        stroke="#f59e0b"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Clock face */
-function Clock() {
-  return (
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Shadow */}
-      <circle cx="50" cy="52" r="40" fill="#fb923c" />
-      {/* Face */}
-      <circle cx="50" cy="50" r="40" fill="#fff7ed" />
-      {/* Rim */}
-      <circle cx="50" cy="50" r="40" fill="none" stroke="#f97316" strokeWidth="5" />
-      {/* Hour ticks */}
-      <line x1="50" y1="14" x2="50" y2="22" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
-      <line x1="50" y1="78" x2="50" y2="86" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
-      <line x1="14" y1="50" x2="22" y2="50" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
-      <line x1="78" y1="50" x2="86" y2="50" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
-      {/* Minute hand */}
-      <line x1="50" y1="50" x2="50" y2="20" stroke="#1e293b" strokeWidth="3.5" strokeLinecap="round" />
-      {/* Hour hand */}
-      <line x1="50" y1="50" x2="68" y2="50" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" />
-      {/* Centre dot */}
-      <circle cx="50" cy="50" r="4" fill="#f97316" />
-    </svg>
-  );
-}
-
-/** Play button (circle with triangle) */
-function PlayButton() {
-  return (
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Shadow */}
-      <circle cx="50" cy="52" r="44" fill="#16a34a" />
-      {/* Face */}
-      <circle cx="50" cy="50" r="44" fill="#22c55e" />
-      {/* Triangle */}
-      <polygon points="38,30 38,70 74,50" fill="white" />
+      {/* Head */}
+      <rect x="24" y="12" width="52" height="60" rx="14" fill="#fbbf24" />
+      {/* Eyes */}
+      <circle cx="38" cy="38" r="6" fill="white" />
+      <circle cx="62" cy="38" r="6" fill="white" />
+      <circle cx="40" cy="39" r="3.5" fill="#1e293b" />
+      <circle cx="64" cy="39" r="3.5" fill="#1e293b" />
+      {/* Smile */}
+      <path d="M37 55 Q50 68 63 55" stroke="#1e293b" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+      {/* Stud on top */}
+      <ellipse cx="50" cy="12" rx="10" ry="4" fill="#f59e0b" />
+      <rect x="40" y="4" width="20" height="10" rx="3" fill="#fbbf24" />
+      {/* Neck */}
+      <rect x="38" y="72" width="24" height="14" rx="4" fill="#f59e0b" />
     </svg>
   );
 }
@@ -170,31 +162,31 @@ interface Item {
 
 const ITEMS: Item[] = [
   // Left edge
-  { Component: TV,          size: 148, rotate: -12, pos: { left: '1%',   top: '2%'    } },
-  { Component: Popcorn,     size: 118, rotate:  -8, pos: { left: '0.5%', top: '42%'   } },
-  { Component: Coin,        size: 142, rotate:  14, pos: { left: '1.5%', bottom: '5%' } },
+  { Component: Atom,          size: 148, rotate: -12, pos: { left: '1%',   top: '2%'    } },
+  { Component: Flask,         size: 118, rotate:  -8, pos: { left: '0.5%', top: '42%'   } },
+  { Component: LegoBrick,     size: 142, rotate:  14, pos: { left: '1.5%', bottom: '5%' } },
   // Right edge
-  { Component: Remote,      size: 130, rotate:  18, pos: { right: '1.5%',top: '3%'    } },
-  { Component: Clapper,     size: 132, rotate:   8, pos: { right: '1%',  top: '38%'   } },
-  { Component: Clock,       size: 128, rotate: -14, pos: { right: '1.5%',bottom: '4%' } },
-  { Component: PlayButton,  size: 112, rotate: -20, pos: { right: '3.5%',top: '67%'   } },
+  { Component: TRex,          size: 130, rotate:  18, pos: { right: '1.5%',top: '3%'    } },
+  { Component: DinoFootprint, size: 132, rotate:   8, pos: { right: '1%',  top: '38%'   } },
+  { Component: LegoHead,      size: 128, rotate: -14, pos: { right: '1.5%',bottom: '4%' } },
+  { Component: Molecule,      size: 112, rotate: -20, pos: { right: '3.5%',top: '67%'   } },
   // Top centre strip
-  { Component: Star,        size:  88, rotate:   5, pos: { left: '22%',  top: '1%'    } },
-  { Component: TV,          size:  96, rotate: -10, pos: { left: '42%',  top: '0.5%'  } },
-  { Component: Popcorn,     size:  90, rotate:  16, pos: { right: '22%', top: '0.5%'  } },
+  { Component: TestTube,      size:  88, rotate:   5, pos: { left: '22%',  top: '1%'    } },
+  { Component: Atom,          size:  96, rotate: -10, pos: { left: '42%',  top: '0.5%'  } },
+  { Component: LegoBrick,     size:  90, rotate:  16, pos: { right: '22%', top: '0.5%'  } },
   // Mid-left band
-  { Component: Clapper,     size: 100, rotate: -15, pos: { left: '10%',  top: '24%'   } },
-  { Component: Remote,      size:  96, rotate:  22, pos: { left: '8%',   top: '58%'   } },
+  { Component: DinoFootprint, size: 100, rotate: -15, pos: { left: '10%',  top: '24%'   } },
+  { Component: Molecule,      size:  96, rotate:  22, pos: { left: '8%',   top: '58%'   } },
   // Centre column
-  { Component: Coin,        size: 110, rotate:  10, pos: { left: '44%',  top: '22%'   } },
-  { Component: Clock,       size: 104, rotate: -18, pos: { left: '46%',  top: '55%'   } },
+  { Component: TRex,          size: 110, rotate:  10, pos: { left: '44%',  top: '22%'   } },
+  { Component: Flask,         size: 104, rotate: -18, pos: { left: '46%',  top: '55%'   } },
   // Mid-right band
-  { Component: Star,        size:  92, rotate:  -6, pos: { right: '10%', top: '22%'   } },
-  { Component: PlayButton,  size:  96, rotate:  12, pos: { right: '9%',  top: '57%'   } },
+  { Component: LegoHead,      size:  92, rotate:  -6, pos: { right: '10%', top: '22%'   } },
+  { Component: TestTube,      size:  96, rotate:  12, pos: { right: '9%',  top: '57%'   } },
   // Bottom centre strip
-  { Component: Remote,      size:  94, rotate:  -8, pos: { left: '23%',  bottom: '4%' } },
-  { Component: Coin,        size: 100, rotate:  14, pos: { left: '44%',  bottom: '3%' } },
-  { Component: Star,        size:  92, rotate:  -5, pos: { right: '23%', bottom: '4%' } },
+  { Component: Atom,          size:  94, rotate:  -8, pos: { left: '23%',  bottom: '4%' } },
+  { Component: DinoFootprint, size: 100, rotate:  14, pos: { left: '44%',  bottom: '3%' } },
+  { Component: LegoBrick,     size:  92, rotate:  -5, pos: { right: '23%', bottom: '4%' } },
 ];
 
 export function BackgroundIllustrations() {
