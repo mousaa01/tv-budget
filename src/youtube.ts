@@ -29,6 +29,34 @@ export interface SearchOptions {
   channelIds?: string[];
 }
 
+export interface ChannelFeedPage {
+  videos: VideoResult[];
+  nextPageToken?: string;
+}
+
+export async function fetchChannelFeed(
+  channelId: string,
+  pageToken?: string
+): Promise<ChannelFeedPage> {
+  const key = getKey();
+  const params = new URLSearchParams({
+    key,
+    part: 'snippet',
+    channelId,
+    type: 'video',
+    order: 'date',
+    safeSearch: 'strict',
+    maxResults: '50',
+    videoEmbeddable: 'true',
+  });
+  if (pageToken) params.set('pageToken', pageToken);
+  const res = await fetch(`${API_BASE}/search?${params.toString()}`);
+  if (!res.ok) throw new Error(`YouTube channel feed failed: ${res.status}`);
+  const data = (await res.json()) as { items: SearchListItem[]; nextPageToken?: string };
+  const videos = await hydrateDurations(data.items ?? [], key);
+  return { videos, nextPageToken: data.nextPageToken };
+}
+
 export async function searchVideos(query: string, opts: SearchOptions = {}): Promise<VideoResult[]> {
   const key = getKey();
   const max = opts.maxResults ?? 25;

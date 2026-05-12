@@ -1,10 +1,10 @@
 import { setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LoadingDots } from './components';
+import { Button, LoadingDots } from './components';
 import { formatMMSS, formatHMS } from './format';
-import { loadSubscribedChannels } from './storage';
-import type { SubscribedChannel } from './types';
+import { clearRecent, loadRecent, loadSubscribedChannels } from './storage';
+import type { RecentVideo, SubscribedChannel } from './types';
 import type { UseBudget } from './useBudget';
 
 // ----------- Focusable sub-components for inline buttons -----------
@@ -87,18 +87,66 @@ interface HomeProps {
   budgetCtl: UseBudget;
 }
 
+function RecentButton({ video, disabled, onPress }: { video: RecentVideo; disabled: boolean; onPress: () => void }) {
+  const { ref, focused } = useFocusable({ onEnterPress: disabled ? undefined : onPress });
+  return (
+    <button
+      ref={disabled ? undefined : (ref as React.Ref<HTMLButtonElement>)}
+      data-focusable={!disabled || undefined}
+      className={focused && !disabled ? 'focused' : undefined}
+      disabled={disabled}
+      onClick={onPress}
+      style={{
+        width: 280,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        background: 'var(--surface)',
+        border: '2px solid var(--border)',
+        borderRadius: 'var(--radius-md)',
+        padding: 10,
+        textAlign: 'left',
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? 'default' : 'pointer',
+      }}
+    >
+      <div style={{
+        width: '100%', aspectRatio: '16/9', borderRadius: 'var(--radius-sm)',
+        overflow: 'hidden', background: 'var(--surface-2)', position: 'relative', flexShrink: 0,
+      }}>
+        <img src={video.thumbnail} alt="" loading="lazy"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <span className="tabular" style={{
+          position: 'absolute', right: 6, bottom: 6,
+          background: 'rgba(0,0,0,0.72)', color: '#fff',
+          fontSize: 16, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+        }}>
+          {formatMMSS(video.durationSeconds)}
+        </span>
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {video.title}
+      </div>
+      <div style={{ fontSize: 16, color: 'var(--text-dim)', fontWeight: 600 }}>
+        {video.channelTitle}
+      </div>
+    </button>
+  );
+}
+
 export function HomeScreen({ budgetCtl }: HomeProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [channels, setChannels] = useState<SubscribedChannel[]>([]);
+  const [recent, setRecent] = useState<RecentVideo[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const meta = loadSubscribedChannels();
     setChannels(meta?.channels ?? []);
-    // NOTE: do NOT auto-focus the search input — on TV that opens the on-screen
-    // keyboard. Focus stays on whatever the spatial nav picks first.
+    setRecent(loadRecent());
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -220,12 +268,51 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
               <ChannelButton
                 key={c.id}
                 channel={c}
-                onPress={() => navigate(`/search?q=${encodeURIComponent(c.title)}`)}
+                onPress={() => navigate(`/search?channelId=${encodeURIComponent(c.id)}&title=${encodeURIComponent(c.title)}`)}
               />
             ))}
           </div>
         )}
       </section>
+
+      {recent.length > 0 && (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
+            <h2 className="t-h2" style={{ color: 'var(--accent)' }}>Recently watched</h2>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                clearRecent();
+                setRecent([]);
+              }}
+            >
+              Clear
+            </Button>
+          </div>
+          <div
+            className="scroll-list"
+            style={{
+              display: 'flex',
+              gap: 'var(--space-3)',
+              overflowX: 'auto',
+              paddingBottom: 'var(--space-2)',
+              alignItems: 'flex-start',
+            }}
+          >
+            {recent.map((r) => {
+              const disabled = r.durationSeconds > budgetCtl.remaining;
+              return (
+                <RecentButton
+                  key={r.id}
+                  video={r}
+                  disabled={disabled}
+                  onPress={() => navigate(`/play/${r.id}?d=${r.durationSeconds}&title=${encodeURIComponent(r.title)}&channel=${encodeURIComponent(r.channelTitle)}`)}
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

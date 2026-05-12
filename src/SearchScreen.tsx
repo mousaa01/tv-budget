@@ -6,7 +6,7 @@ import { formatMMSS } from './format';
 import { loadSettings, loadSubscribedChannels } from './storage';
 import type { VideoResult } from './types';
 import type { UseBudget } from './useBudget';
-import { applyBlocklist, partitionByDuration, searchVideos } from './youtube';
+import { applyBlocklist, fetchChannelFeed, partitionByDuration, searchVideos } from './youtube';
 
 interface SearchProps {
   budgetCtl: UseBudget;
@@ -16,32 +16,45 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const query = params.get('q') ?? '';
+  const channelId = params.get('channelId') ?? '';
+  const channelTitle = params.get('title') ?? '';
+  const isChannelMode = channelId.length > 0;
 
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fits, setFits] = useState<VideoResult[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [subscribedSet, setSubscribedSet] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setFits([]);
+    setNextPageToken(undefined);
     const settings = loadSettings();
     const subscribed = loadSubscribedChannels();
     setSubscribedSet(new Set(subscribed?.channels.map((c) => c.id) ?? []));
 
-    // Only fan-out per channel for the small manual allowlist.
-    // Subscriptions are used for badging only â€” not filtering â€” to avoid
-    // burning 1 quota unit per subscribed channel on every search.
-    searchVideos(query, {
-      channelIds: settings.channelAllowlist.length > 0 ? settings.channelAllowlist : undefined,
-    })
-      .then((raw) => {
-        if (cancelled) return;
-        const filtered = applyBlocklist(raw, settings.blocklistKeywords);
-        const split = partitionByDuration(filtered, budgetCtl.remaining);
-        setFits(split.fits);
-      })
+    const run = isChannelMode
+      ? fetchChannelFeed(channelId).then((page) => {
+          const filtered = applyBlocklist(page.videos, settings.blocklistKeywords);
+          const split = partitionByDuration(filtered, budgetCtl.remaining);
+          if (cancelled) return;
+          setFits(split.fits);
+          setNextPageToken(page.nextPageToken);
+        })
+      : searchVideos(query, {
+          channelIds: settings.channelAllowlist.length > 0 ? settings.channelAllowlist : undefined,
+        }).then((raw) => {
+          if (cancelled) return;
+          const filtered = applyBlocklist(raw, settings.blocklistKeywords);
+          const split = partitionByDuration(filtered, budgetCtl.remaining);
+          setFits(split.fits);
+        });
+
+    run
       .catch((e: unknown) => {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : 'Search failed');
@@ -54,7 +67,24 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     return () => {
       cancelled = true;
     };
-  }, [query, budgetCtl.remaining]);
+  }, [query, channelId, isChannelMode, budgetCtl.remaining]);
+
+  const loadMore = () => {
+    if (!isChannelMode || !nextPageToken || loadingMore) return;
+    setLoadingMore(true);
+    const settings = loadSettings();
+    fetchChannelFeed(channelId, nextPageToken)
+      .then((page) => {
+        const filtered = applyBlocklist(page.videos, settings.blocklistKeywords);
+        const split = partitionByDuration(filtered, budgetCtl.remaining);
+        setFits((prev) => [...prev, ...split.fits]);
+        setNextPageToken(page.nextPageToken);
+      })
+      .catch(() => {
+        /* ignore */
+      })
+      .finally(() => setLoadingMore(false));
+  };
 
   // Screen-level LRUD container.
   const { ref: screenRef } = useFocusable({
@@ -83,7 +113,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         <Button id="SEARCH_BACK" variant="secondary" onClick={() => navigate('/')}>
           ← Back
         </Button>
-        <div className="t-h1">{query}</div>
+        <div className="t-h1">{isChannelMode ? channelTitle : query}</div>
       </header>
 
       <main className="scroll-list" style={{ flex: 1, minHeight: 0, paddingRight: 'var(--space-2)' }}>
@@ -95,7 +125,11 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         )}
 
         {!loading && !error && fits.length === 0 && (
-          <div className="t-body">No results for “{query}”.</div>
+          <div className="t-body">
+            {isChannelMode
+              ? `No videos from ${channelTitle} fit the time you have left.`
+              : `No results for “${query}”.`}
+          </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
@@ -111,6 +145,13 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               onSelect={() => navigate(`/play/${v.id}?d=${v.durationSeconds}&title=${encodeURIComponent(v.title)}&channel=${encodeURIComponent(v.channelTitle)}`)}
             />
           ))}
+          {isChannelMode && nextPageToken && !loading && (
+            <div style={{ padding: 'var(--space-3) 0', display: 'flex', justifyContent: 'center' }}>
+              <Button variant="secondary" onClick={loadMore}>
+                {loadingMore ? 'Loading…' : 'Load more videos'}
+              </Button>
+            </div>
+          )}
         </div>
       </main>
     </div>

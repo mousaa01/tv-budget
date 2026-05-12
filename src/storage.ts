@@ -99,6 +99,10 @@ export function pushRecent(v: RecentVideo): void {
   localStorage.setItem(KEYS.recent, JSON.stringify(list.slice(0, 10)));
 }
 
+export function clearRecent(): void {
+  localStorage.removeItem(KEYS.recent);
+}
+
 export function loadHistory(): DailySummary[] {
   try {
     return JSON.parse(localStorage.getItem(KEYS.history) ?? '[]') as DailySummary[];
