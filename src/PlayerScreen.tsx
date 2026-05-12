@@ -274,6 +274,14 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
           pointerEvents: 'auto', zIndex: 50,
         }} onClick={(e) => e.preventDefault()} />
       )}
+      {/* Cover the YouTube top bar (title + channel chip) so clicks there
+          don't open YouTube in a new tab. */}
+      <div aria-hidden style={{
+        position: 'absolute', left: 0, right: 0, top: 0,
+        height: 80,
+        background: '#000',
+        pointerEvents: 'auto', zIndex: 49,
+      }} onClick={(e) => e.preventDefault()} />
       {/* Cover the entire YouTube control strip below the progress bar
           (YT logo, "More videos" pill, and any other branding/links). */}
       <div aria-hidden style={{
