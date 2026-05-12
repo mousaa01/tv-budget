@@ -19,6 +19,20 @@ interface SearchListItem {
   };
 }
 
+// playlistItems.list returns items shaped slightly differently — videoId lives
+// under `contentDetails.videoId` and the snippet has `videoOwnerChannelId`.
+interface PlaylistItem {
+  contentDetails: { videoId: string };
+  snippet: {
+    title: string;
+    channelTitle?: string;
+    videoOwnerChannelTitle?: string;
+    videoOwnerChannelId?: string;
+    channelId: string;
+    thumbnails: { medium?: { url: string }; high?: { url: string }; default: { url: string } };
+  };
+}
+
 interface VideosListItem {
   id: string;
   contentDetails: { duration: string };
@@ -34,26 +48,70 @@ export interface ChannelFeedPage {
   nextPageToken?: string;
 }
 
+// The YouTube convention: a channel's "uploads" playlist ID is the channel ID
+// with the second character flipped from 'C' to 'U'. e.g. UCxxxx -> UUxxxx.
+// This avoids a separate channels.list lookup and works for every channel.
+function uploadsPlaylistId(channelId: string): string {
+  if (channelId.length < 2 || channelId[1] !== 'C') return channelId;
+  return channelId[0] + 'U' + channelId.slice(2);
+}
+
+/**
+ * Fetch a single page of a channel's uploads.
+ *
+ * Uses `playlistItems.list` against the channel's auto-generated uploads
+ * playlist (UU...) instead of `search.list`. Reasons:
+ *   1. Quota: playlistItems = 1 unit/call vs search = 100 units/call. With
+ *      auto-pagination through 8 pages, that's 8 vs 800 units — search.list
+ *      is the difference between working all day and breaking after a couple
+ *      of channel browses.
+ *   2. Reliability: search.list with videoEmbeddable+safeSearch occasionally
+ *      returns 5xx or empty pages mid-pagination. playlistItems is stable.
+ *   3. Completeness: every uploaded video appears in uploads, in order.
+ *      search.list silently drops some.
+ *
+ * Trade-off: playlistItems doesn't accept safeSearch — but our blocklist
+ * filter and the kid-friendly channel allowlist already provide that gate.
+ */
 export async function fetchChannelFeed(
   channelId: string,
   pageToken?: string
 ): Promise<ChannelFeedPage> {
   const key = getKey();
+  const playlistId = uploadsPlaylistId(channelId);
   const params = new URLSearchParams({
     key,
-    part: 'snippet',
-    channelId,
-    type: 'video',
-    order: 'date',
-    safeSearch: 'strict',
+    part: 'snippet,contentDetails',
+    playlistId,
     maxResults: '50',
-    videoEmbeddable: 'true',
   });
   if (pageToken) params.set('pageToken', pageToken);
-  const res = await fetch(`${API_BASE}/search?${params.toString()}`);
-  if (!res.ok) throw new Error(`YouTube channel feed failed: ${res.status}`);
-  const data = (await res.json()) as { items: SearchListItem[]; nextPageToken?: string };
-  const videos = await hydrateDurations(data.items ?? [], key);
+  const res = await fetch(`${API_BASE}/playlistItems?${params.toString()}`);
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const errBody = (await res.json()) as { error?: { message?: string } };
+      detail = errBody.error?.message ?? '';
+    } catch { /* ignore body parse errors */ }
+    throw new Error(`YouTube channel feed failed (${res.status})${detail ? `: ${detail}` : ''}`);
+  }
+  const data = (await res.json()) as { items: PlaylistItem[]; nextPageToken?: string };
+  // Convert PlaylistItem → SearchListItem-shaped objects so the rest of the
+  // pipeline (hydrateDurations) is unchanged.
+  const items: SearchListItem[] = (data.items ?? [])
+    .filter((it) => it.contentDetails?.videoId)
+    .map((it) => ({
+      id: { videoId: it.contentDetails.videoId },
+      snippet: {
+        title: it.snippet.title,
+        channelTitle:
+          it.snippet.videoOwnerChannelTitle ?? it.snippet.channelTitle ?? '',
+        channelId:
+          it.snippet.videoOwnerChannelId ?? it.snippet.channelId ?? channelId,
+        thumbnails: it.snippet.thumbnails,
+      },
+    }));
+  const videos = await hydrateDurations(items, key);
   return { videos, nextPageToken: data.nextPageToken };
 }
 

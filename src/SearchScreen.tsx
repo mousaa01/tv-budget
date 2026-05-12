@@ -99,8 +99,11 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         setTooLong((prev) => [...prev, ...split.tooLong]);
         setNextPageToken(page.nextPageToken);
       })
-      .catch(() => {
-        /* ignore — user can retry via Load more */
+      .catch((e: unknown) => {
+        // Surface the failure so the user knows pagination stopped and why.
+        setError(e instanceof Error ? e.message : 'Loading more videos failed');
+        // Clear the token so we don't keep trying the same broken page.
+        setNextPageToken(undefined);
       })
       .finally(() => setLoadingMore(false));
   };
@@ -155,7 +158,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         {loading && <LoadingDots />}
         {error && (
           <div style={{ color: 'var(--danger)', padding: 'var(--space-3)' }}>
-            Couldn't search — try again.
+            Couldn't load videos — {error}
           </div>
         )}
 
