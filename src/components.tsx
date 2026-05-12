@@ -413,9 +413,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  scrollRef?: React.Ref<HTMLDivElement>;
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, scrollRef }: ModalProps) {
   // LRUD boundary: while the modal is open, arrow keys are trapped inside it.
   const { ref, focusKey } = useFocusable({
     focusKey: 'MODAL',
@@ -463,6 +464,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         onClick={onClose}
       >
         <div
+          ref={scrollRef}
           onClick={(e) => e.stopPropagation()}
           style={{
             background: 'rgba(255,255,255,0.97)',
@@ -494,6 +496,41 @@ export function LoadingDots() {
       <span style={{ animation: 'pulse 1.4s var(--ease) infinite' }}>·</span>
       <span style={{ animation: 'pulse 1.4s var(--ease) 0.2s infinite' }}>·</span>
       <span style={{ animation: 'pulse 1.4s var(--ease) 0.4s infinite' }}>·</span>
+    </div>
+  );
+}
+
+/* ---------------- ScrollNav (page up / page down floating buttons) ---------------- */
+
+interface ScrollNavProps {
+  /** ref to the scrollable container element */
+  targetRef: React.RefObject<HTMLElement | null>;
+  /** distance per click in px; defaults to 80% of viewport height */
+  step?: number;
+  bottomOffset?: number | string;
+}
+
+export function ScrollNav({ targetRef, step, bottomOffset = 'var(--space-4)' }: ScrollNavProps) {
+  const scrollBy = (dir: 1 | -1) => {
+    const el = targetRef.current;
+    if (!el) return;
+    const dist = step ?? Math.round(el.clientHeight * 0.8);
+    el.scrollBy({ top: dir * dist, behavior: 'smooth' });
+  };
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: 'var(--space-4)',
+        bottom: bottomOffset,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-2)',
+        zIndex: 90,
+      }}
+    >
+      <Button variant="secondary" onClick={() => scrollBy(-1)} aria-label="Scroll up">▲</Button>
+      <Button variant="secondary" onClick={() => scrollBy(1)} aria-label="Scroll down">▼</Button>
     </div>
   );
 }

@@ -282,11 +282,12 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
         background: 'transparent',
         pointerEvents: 'auto', zIndex: 49,
       }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
-      {/* Transparent click-shield over the bottom control strip (YT logo,
-          "More videos" pill, etc.) — blocks navigation without masking pixels. */}
+      {/* Transparent click-shield over the bottom half of the screen — on TV
+          the YouTube "More videos" rail can extend well above the control bar,
+          so we block clicks across the whole lower half (still see-through). */}
       <div aria-hidden style={{
         position: 'absolute', left: 0, right: 0, bottom: 0,
-        height: 56,
+        height: '50%',
         background: 'transparent',
         pointerEvents: 'auto', zIndex: 49,
       }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />

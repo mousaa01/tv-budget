@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, LoadingDots } from './components';
 import { formatMMSS, formatHMS } from './format';
-import { clearRecent, loadRecent, loadSubscribedChannels } from './storage';
-import type { RecentVideo, SubscribedChannel } from './types';
+import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, isTokenValid } from './oauth';
+import { clearRecent, loadRecent, loadSubscribedChannels, saveSubscribedChannels } from './storage';
+import type { RecentVideo, SubscribedChannel, SubscribedChannelsMeta } from './types';
 import type { UseBudget } from './useBudget';
 
 // ----------- Focusable sub-components for inline buttons -----------
@@ -149,6 +150,36 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
     setRecent(loadRecent());
   }, []);
 
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const refreshSubs = async () => {
+    const meta = loadSubscribedChannels();
+    if (!meta || !isTokenValid(meta)) {
+      window.location.href = buildAuthUrl();
+      return;
+    }
+    setRefreshing(true);
+    setRefreshError(null);
+    try {
+      const [fresh, profile] = await Promise.all([
+        fetchSubscribedChannels(meta.accessToken),
+        fetchUserProfile(meta.accessToken),
+      ]);
+      const updated: SubscribedChannelsMeta = {
+        ...meta,
+        channels: fresh,
+        profile: profile ?? meta.profile,
+        syncedAt: new Date().toISOString(),
+      };
+      saveSubscribedChannels(updated);
+      setChannels(fresh);
+    } catch (e) {
+      setRefreshError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
@@ -250,7 +281,15 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
 
       {/* Subscribed channels row — always shown if signed in */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        <h2 className="t-h2" style={{ color: 'var(--accent-3)' }}>Your channels</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
+          <h2 className="t-h2" style={{ color: 'var(--accent-3)' }}>Your channels</h2>
+          <Button variant="secondary" onClick={refreshSubs} disabled={refreshing}>
+            {refreshing ? 'Refreshing…' : '↻ Refresh subscriptions'}
+          </Button>
+        </div>
+        {refreshError && (
+          <div className="t-meta" style={{ color: 'var(--danger)' }}>⚠ {refreshError}</div>
+        )}
         {channels.length === 0 ? (
           <div className="t-meta" style={{ padding: 'var(--space-1) 0', color: 'var(--text-faint)' }}>
             No subscribed channels found.

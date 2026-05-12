@@ -1,7 +1,7 @@
 ﻿import { setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, LoadingDots, VideoCard } from './components';
+import { Button, LoadingDots, ScrollNav, VideoCard } from './components';
 import { formatMMSS } from './format';
 import { loadSettings, loadSubscribedChannels } from './storage';
 import type { VideoResult } from './types';
@@ -98,6 +98,8 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     setFocus('SEARCH_BACK');
   }, []);
 
+  const mainRef = useRef<HTMLElement>(null);
+
   return (
     <div
       ref={screenRef as React.Ref<HTMLDivElement>}
@@ -116,7 +118,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         <div className="t-h1">{isChannelMode ? channelTitle : query}</div>
       </header>
 
-      <main className="scroll-list" style={{ flex: 1, minHeight: 0, paddingRight: 'var(--space-2)' }}>
+      <main ref={mainRef} className="scroll-list" style={{ flex: 1, minHeight: 0, paddingRight: 'var(--space-2)' }}>
         {loading && <LoadingDots />}
         {error && (
           <div style={{ color: 'var(--danger)', padding: 'var(--space-3)' }}>
@@ -166,6 +168,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           )}
         </div>
       </main>
+      <ScrollNav targetRef={mainRef} />
     </div>
   );
 }

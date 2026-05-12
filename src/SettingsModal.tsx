@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Button, Modal } from './components';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Modal, ScrollNav } from './components';
 import { formatHMS } from './format';
 import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, isTokenValid } from './oauth';
 import { clearSubscribedChannels, loadHistory, loadSettings, loadSubscribedChannels, saveSettings, saveSubscribedChannels } from './storage';
@@ -109,9 +109,10 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
   };
 
   const history = loadHistory().slice(0, 7);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Modal open={open} onClose={onClose} title="Settings">
+    <Modal open={open} onClose={onClose} title="Settings" scrollRef={scrollRef}>
       {!authed ? (
         <>
           <p className="t-body">Enter parent PIN.</p>
@@ -369,6 +370,7 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
           )}
         </div>
       )}
+      <ScrollNav targetRef={scrollRef} bottomOffset="var(--space-6)" />
     </Modal>
   );
 }
