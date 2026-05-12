@@ -25,7 +25,7 @@ Set-Location $repo
 Write-Host ">>> Running tests before deploy" -ForegroundColor Cyan
 npm run test
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "!!! Tests failed — deploy aborted." -ForegroundColor Red
+  Write-Host "!!! Tests failed - deploy aborted." -ForegroundColor Red
   exit 1
 }
 Write-Host "    All tests passed." -ForegroundColor Green

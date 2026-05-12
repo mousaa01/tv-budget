@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { WindDownBanner } from './components';
+import { formatMMSS } from './format';
 import { incrementVideosWatchedToday, pushRecent } from './storage';
 import type { UseBudget } from './useBudget';
 
@@ -8,81 +9,195 @@ interface PlayerProps {
   budgetCtl: UseBudget;
 }
 
-// YouTube player state constants (sent via postMessage with enablejsapi=1)
-const YT_ENDED = 0;
-const YT_PLAYING = 1;
-const YT_PAUSED = 2;
+// Detect Tizen (Samsung TV WebView). The `tizen` global is only present on Tizen devices.
+function isTizen(): boolean {
+  return typeof (window as unknown as { tizen?: unknown }).tizen !== 'undefined';
+}
 
-export function PlayerScreen({ budgetCtl }: PlayerProps) {
-  const { videoId } = useParams<{ videoId: string }>();
-  const [searchParams] = useSearchParams();
+// Launch the native YouTube TV app for a video.
+// Uses Tizen ApplicationControl with the YouTube TV web URI, which the OS routes to
+// the installed YouTube app (every Samsung TV ships with it). Returns true if launched.
+function launchYouTubeTvApp(videoId: string): boolean {
+  try {
+    const w = window as unknown as {
+      tizen?: {
+        application: {
+          launchAppControl: (
+            ctrl: unknown,
+            appId: string | null,
+            onSuccess: (() => void) | null,
+            onError: ((e: unknown) => void) | null,
+          ) => void;
+          ApplicationControl: new (
+            operation: string,
+            uri: string | null,
+          ) => unknown;
+        };
+      };
+    };
+    if (!w.tizen?.application) return false;
+    const ctrl = new w.tizen.application.ApplicationControl(
+      'http://tizen.org/appcontrol/operation/view',
+      `https://www.youtube.com/tv#/watch?v=${videoId}`,
+    );
+    w.tizen.application.launchAppControl(ctrl, null, null, (e) => {
+      console.error('launchAppControl failed:', e);
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// â”€â”€â”€ Tizen player â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Launches the native YouTube TV app and shows a budget-timer overlay in our app.
+// When the user presses Back in YouTube, the TV OS returns focus to our app,
+// which we detect via visibilitychange / pageshow and then navigate home.
+
+interface TizenPlayerProps {
+  videoId: string;
+  title: string;
+  knownDuration: number;
+  budgetCtl: UseBudget;
+}
+
+function TizenPlayer({ videoId, title, knownDuration, budgetCtl }: TizenPlayerProps) {
   const navigate = useNavigate();
-  const knownDuration = Number(searchParams.get('d') ?? '0');
-  const title = searchParams.get('title') ?? '';
-  const channelTitle = searchParams.get('channel') ?? '';
-
-  const [showTwoMin, setShowTwoMin] = useState(false);
-  const [showThirtySec, setShowThirtySec] = useState(false);
-  const [maskEndScreen, setMaskEndScreen] = useState(false);
-
-  // Diagnostic: track what state postMessage reports so we can see it on TV.
-  const [ytStatus, setYtStatus] = useState<string>('waiting for YouTube…');
   const [elapsed, setElapsed] = useState(0);
-  const mountTime = useRef(Date.now());
+  const launchedRef = useRef(false);
 
-  // Elapsed seconds counter — shows on screen so we can see the overlay updating.
+  // Launch native YouTube app once on mount.
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setElapsed(Math.floor((Date.now() - mountTime.current) / 1000));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  // Start budget timer and record this video on mount.
-  useEffect(() => {
-    if (!videoId) return;
+    if (launchedRef.current) return;
+    launchedRef.current = true;
     budgetCtl.startTicking();
     incrementVideosWatchedToday();
-    pushRecent({
-      id: videoId,
-      title: title || 'YouTube Video',
-      channelTitle,
-      channelId: '',
-      thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
-      durationSeconds: knownDuration,
-      watchedAt: Date.now(),
-    });
+    const launched = launchYouTubeTvApp(videoId);
+    if (!launched) {
+      // Tizen API unavailable (shouldn't happen on real TV) â€” go home.
+      navigate('/', { replace: true });
+    }
     return () => budgetCtl.stopTicking();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
 
-  // Listen for YouTube player state via postMessage (requires enablejsapi=1 in src).
+  // Track elapsed time in our overlay while YouTube app is in foreground.
+  useEffect(() => {
+    const id = window.setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // When the user presses Back in the YouTube app, the OS returns focus/visibility
+  // to our app. Detect this and navigate home so the budget is saved.
+  useEffect(() => {
+    const onVisible = () => {
+      if (!document.hidden) {
+        budgetCtl.stopTicking();
+        navigate('/', { replace: true });
+      }
+    };
+    const onPageShow = () => {
+      budgetCtl.stopTicking();
+      navigate('/', { replace: true });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [navigate, budgetCtl]);
+
+  // Budget exhausted â€” force home.
+  useEffect(() => {
+    if (budgetCtl.remaining <= 0) {
+      budgetCtl.stopTicking();
+      navigate('/', { replace: true });
+    }
+  }, [budgetCtl.remaining, budgetCtl, navigate]);
+
+  const remaining = formatMMSS(budgetCtl.remaining);
+  const videoElapsed = formatMMSS(elapsed);
+  const videoTotal = knownDuration > 0 ? formatMMSS(knownDuration) : '??:??';
+  const budgetWarn = budgetCtl.remaining > 0 && budgetCtl.remaining <= 120;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      gap: 32, color: '#fff', fontFamily: 'Nunito, sans-serif',
+    }}>
+      <div style={{ fontSize: 64 }}>â–¶</div>
+      <div style={{
+        fontSize: 28, fontWeight: 800, textAlign: 'center',
+        maxWidth: 900, padding: '0 40px',
+        color: '#f1f5f9',
+      }}>
+        {title || 'Playing on YouTube'}
+      </div>
+      <div style={{ fontSize: 22, color: '#94a3b8' }}>
+        {videoElapsed} / {videoTotal}
+      </div>
+
+      {/* Budget pill */}
+      <div style={{
+        padding: '12px 32px', borderRadius: 999,
+        background: budgetWarn ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.08)',
+        border: `2px solid ${budgetWarn ? '#f59e0b' : 'rgba(255,255,255,0.15)'}`,
+        fontSize: 22, fontWeight: 700,
+        color: budgetWarn ? '#fbbf24' : '#cbd5e1',
+      }}>
+        {budgetWarn ? 'âš ï¸ ' : 'â± '}{remaining} budget remaining
+      </div>
+
+      <div style={{ fontSize: 18, color: '#475569', marginTop: 16 }}>
+        Press <strong style={{ color: '#94a3b8' }}>Back</strong> on the YouTube app to return here
+      </div>
+    </div>
+  );
+}
+
+// â”€â”€â”€ Web (iframe) player â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Used in desktop browsers and dev mode where Tizen isn't available.
+
+const YT_ENDED = 0;
+const YT_PLAYING = 1;
+const YT_PAUSED = 2;
+
+interface WebPlayerProps {
+  videoId: string;
+  knownDuration: number;
+  budgetCtl: UseBudget;
+}
+
+function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
+  const navigate = useNavigate();
+  const [showTwoMin, setShowTwoMin] = useState(false);
+  const [showThirtySec, setShowThirtySec] = useState(false);
+  const [maskEndScreen, setMaskEndScreen] = useState(false);
+
+  useEffect(() => {
+    budgetCtl.startTicking();
+    return () => budgetCtl.stopTicking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoId]);
+
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         const state: number | undefined = data?.info?.playerState ?? data?.playerState;
-        if (state === YT_PLAYING) {
-          budgetCtl.startTicking();
-          setYtStatus('▶ playing');
-        } else if (state === YT_PAUSED) {
-          budgetCtl.stopTicking();
-          setYtStatus('⏸ paused');
-        } else if (state === YT_ENDED) {
-          setYtStatus('⏹ ended → going home');
-          navigate('/', { replace: true });
-        } else if (state !== undefined) {
-          setYtStatus(`state=${state}`);
-        } else if (data?.event) {
-          setYtStatus(`event: ${String(data.event)}`);
-        }
-      } catch { /* ignore non-JSON messages */ }
+        if (state === YT_PLAYING) budgetCtl.startTicking();
+        else if (state === YT_PAUSED) budgetCtl.stopTicking();
+        else if (state === YT_ENDED) navigate('/', { replace: true });
+      } catch { /* ignore */ }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, [navigate, budgetCtl]);
 
-  // Wind-down banners + end-screen mask, polled on a timer.
   const remainingRef = useRef(budgetCtl.remaining);
   useEffect(() => { remainingRef.current = budgetCtl.remaining; }, [budgetCtl.remaining]);
 
@@ -91,20 +206,18 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
     const id = window.setInterval(() => {
       const elapsedSec = (Date.now() - start) / 1000;
       if (knownDuration > 0) {
-        const remainingInVideo = Math.max(0, knownDuration - elapsedSec);
-        setMaskEndScreen(remainingInVideo > 0 && remainingInVideo <= 25);
+        setMaskEndScreen(Math.max(0, knownDuration - elapsedSec) <= 25);
       }
-      const budgetRemaining = remainingRef.current;
-      setShowTwoMin(budgetRemaining >= 110 && budgetRemaining <= 130);
-      setShowThirtySec(budgetRemaining >= 25 && budgetRemaining <= 35);
+      const rem = remainingRef.current;
+      setShowTwoMin(rem >= 110 && rem <= 130);
+      setShowThirtySec(rem >= 25 && rem <= 35);
     }, 2000);
     return () => clearInterval(id);
   }, [knownDuration]);
 
-  // Back key returns home
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Backspace' || e.key === 'Escape' || e.key === 'XF86Back') {
+      if (e.key === 'Backspace' || e.key === 'Escape') {
         e.preventDefault();
         navigate('/', { replace: true });
       }
@@ -114,24 +227,17 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
   }, [navigate]);
 
   const bannerText = showTwoMin
-    ? '2 minutes left — this video will finish'
-    : showThirtySec
-    ? '30 seconds left — this video will finish'
-    : '';
+    ? '2 minutes left â€” this video will finish'
+    : showThirtySec ? '30 seconds left â€” this video will finish' : '';
 
-  if (!videoId) return null;
-
-  // Use youtube-nocookie.com — not intercepted by Samsung's native YouTube deep-link handler.
-  // enablejsapi=1 + origin allows postMessage state events without the IFrame JS API library.
   const origin = window.location.origin || 'https://tv-budget.vercel.app';
   const src =
     `https://www.youtube-nocookie.com/embed/${videoId}` +
-    `?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3` +
-    `&fs=0&controls=1&playsinline=1` +
+    `?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&fs=0&controls=1&playsinline=1` +
     `&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#1a1a2e' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#000' }}>
       <iframe
         src={src}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
@@ -139,37 +245,68 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
         allowFullScreen
         title="YouTube video"
       />
-
-      {/* Diagnostic overlay — dark strip at top showing iframe URL and YT postMessage status.
-          Background is dark navy (#1a1a2e) so if iframe is blank we see the overlay, not black. */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0,
-        background: 'rgba(10,10,30,0.88)',
-        color: '#7dd3fc', fontSize: 18, fontFamily: 'monospace',
-        padding: '8px 16px', zIndex: 200, lineHeight: 1.6,
-        pointerEvents: 'none',
-      }}>
-        <div>📺 {elapsed}s | YT: {ytStatus}</div>
-        <div style={{ fontSize: 14, color: '#94a3b8', wordBreak: 'break-all' }}>{src}</div>
-      </div>
-
-      {/* End-screen mask */}
       {maskEndScreen && (
-        <>
-          <div aria-hidden style={{
-            position: 'absolute', right: 0, bottom: 0, width: '32%', height: '70%',
-            background: 'linear-gradient(to top left, rgba(0,0,0,0.85), rgba(0,0,0,0))',
-            pointerEvents: 'auto', zIndex: 50,
-          }} onClick={(e) => e.preventDefault()} />
-          <div aria-hidden style={{
-            position: 'absolute', left: 0, right: 0, bottom: 0, height: '25%',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0))',
-            pointerEvents: 'none', zIndex: 49,
-          }} />
-        </>
+        <div aria-hidden style={{
+          position: 'absolute', right: 0, bottom: 0, width: '32%', height: '70%',
+          background: 'linear-gradient(to top left, rgba(0,0,0,0.85), rgba(0,0,0,0))',
+          pointerEvents: 'auto', zIndex: 50,
+        }} onClick={(e) => e.preventDefault()} />
       )}
-
       <WindDownBanner show={!!bannerText} text={bannerText} />
     </div>
   );
 }
+
+// â”€â”€â”€ Route component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+export function PlayerScreen({ budgetCtl }: PlayerProps) {
+  const { videoId } = useParams<{ videoId: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const knownDuration = Number(searchParams.get('d') ?? '0');
+  const title = searchParams.get('title') ?? '';
+  const channelTitle = searchParams.get('channel') ?? '';
+
+  // Record to recent history on every play.
+  useEffect(() => {
+    if (!videoId) return;
+    pushRecent({
+      id: videoId,
+      title: title || 'YouTube Video',
+      channelTitle,
+      channelId: '',
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+      durationSeconds: knownDuration,
+      watchedAt: Date.now(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoId]);
+
+  if (!videoId) {
+    navigate('/', { replace: true });
+    return null;
+  }
+
+  // On Tizen TV: hand off to native YouTube app.
+  // In any other browser: use the iframe embed.
+  if (isTizen()) {
+    return (
+      <TizenPlayer
+        videoId={videoId}
+        title={title}
+        knownDuration={knownDuration}
+        budgetCtl={budgetCtl}
+      />
+    );
+  }
+
+  return (
+    <WebPlayer
+      videoId={videoId}
+      knownDuration={knownDuration}
+      budgetCtl={budgetCtl}
+    />
+  );
+}
+

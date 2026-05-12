@@ -1,20 +1,15 @@
-/**
+﻿/**
  * PlayerScreen tests.
  *
- * Key invariants we guard:
- *  1. An <iframe> (not a blank div) is rendered for a valid videoId.
- *  2. The iframe src contains the videoId and uses the youtube-nocookie domain.
- *  3. Back/Escape/XF86Back key navigates home.
- *  4. budgetCtl.stopTicking() is called on unmount.
- *  5. budgetCtl.startTicking() is called on mount (immediate — no waiting for YT API).
+ * On non-Tizen environments (jsdom / browser) the WebPlayer branch renders.
+ * We also test the isTizen detection and the TizenPlayer budget/navigation logic.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PlayerScreen } from './PlayerScreen';
 import type { UseBudget } from './useBudget';
 
-// Mock LRUD — not needed for PlayerScreen (no focusable elements).
 vi.mock('@noriginmedia/norigin-spatial-navigation', () => ({
   useFocusable: () => ({ ref: { current: null }, focused: false }),
   setFocus: vi.fn(),
@@ -29,7 +24,7 @@ vi.mock('react-router-dom', async (importActual) => {
 
 function makeBudget(overrides: Partial<UseBudget> = {}): UseBudget {
   return {
-    budget: { date: '2026-05-11', dailyLimitSeconds: 3600, secondsUsedToday: 0, bonusSecondsToday: 0 },
+    budget: { date: '2026-05-12', dailyLimitSeconds: 3600, secondsUsedToday: 0, bonusSecondsToday: 0 },
     remaining: 3600,
     noNewVideos: false,
     startTicking: vi.fn(),
@@ -54,10 +49,18 @@ function renderPlayer(videoId = 'dQw4w9WgXcQ', budgetCtl?: UseBudget) {
 
 beforeEach(() => {
   mockNavigate.mockReset();
+  // Ensure tizen global is NOT set (jsdom = web browser path).
+  delete (window as unknown as { tizen?: unknown }).tizen;
 });
 
-describe('PlayerScreen', () => {
-  it('renders an <iframe> element (not a blank container)', () => {
+afterEach(() => {
+  delete (window as unknown as { tizen?: unknown }).tizen;
+});
+
+// â”€â”€ WebPlayer (iframe) branch â€” runs when window.tizen is undefined â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+describe('PlayerScreen (web/iframe branch)', () => {
+  it('renders an <iframe> element', () => {
     renderPlayer();
     expect(screen.getByTitle('YouTube video')).toBeInTheDocument();
     expect(screen.getByTitle('YouTube video').tagName).toBe('IFRAME');
@@ -69,7 +72,7 @@ describe('PlayerScreen', () => {
     expect(iframe.src).toContain('dQw4w9WgXcQ');
   });
 
-  it('iframe src uses youtube-nocookie.com (not intercepted by Samsung native handler)', () => {
+  it('iframe src uses youtube-nocookie.com', () => {
     renderPlayer('abc123');
     const iframe = screen.getByTitle('YouTube video') as HTMLIFrameElement;
     expect(iframe.src).toContain('youtube-nocookie.com/embed/abc123');
@@ -108,29 +111,17 @@ describe('PlayerScreen', () => {
 
   it('navigates home on Escape key', () => {
     renderPlayer();
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    });
-    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
-  });
-
-  it('navigates home on XF86Back key (Samsung remote Back button)', () => {
-    renderPlayer();
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'XF86Back', bubbles: true }));
-    });
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 
   it('navigates home on Backspace key', () => {
     renderPlayer();
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
-    });
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true })));
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 
-  it('navigates home when YouTube postMessage signals video ENDED (state=0)', () => {
+  it('navigates home when YouTube postMessage signals ENDED (state=0)', () => {
     renderPlayer();
     act(() => {
       window.dispatchEvent(
@@ -146,7 +137,6 @@ describe('PlayerScreen', () => {
   it('calls startTicking when YouTube postMessage signals PLAYING (state=1)', () => {
     const budget = makeBudget();
     renderPlayer('vid3', budget);
-    // Reset so we can check it was called again from postMessage
     vi.mocked(budget.startTicking).mockClear();
     act(() => {
       window.dispatchEvent(
@@ -174,16 +164,77 @@ describe('PlayerScreen', () => {
     expect(budget.stopTicking).toHaveBeenCalled();
   });
 
-  it('renders nothing when videoId is missing from URL', () => {
-    const budget = makeBudget();
-    const { container } = render(
+  it('renders null when videoId is missing and navigates home', () => {
+    mockNavigate.mockReset();
+    render(
       <MemoryRouter initialEntries={['/play/']}>
         <Routes>
-          <Route path="/play/:videoId" element={<PlayerScreen budgetCtl={budget} />} />
-          <Route path="/play/" element={<PlayerScreen budgetCtl={budget} />} />
+          <Route path="/play/" element={<PlayerScreen budgetCtl={makeBudget()} />} />
         </Routes>
       </MemoryRouter>,
     );
-    expect(container.querySelector('iframe')).toBeNull();
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+  });
+});
+
+// â”€â”€ TizenPlayer branch â€” runs when window.tizen is defined â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+describe('PlayerScreen (Tizen/native-app branch)', () => {
+  beforeEach(() => {
+    // Inject a mock tizen global to activate the Tizen branch.
+    (window as unknown as { tizen: unknown }).tizen = {
+      application: {
+        launchAppControl: vi.fn(),
+        // Must be a regular function (not arrow) so it can be called with `new`.
+        ApplicationControl: vi.fn(function (this: Record<string, unknown>, op: string, uri: string) {
+          this.op = op;
+          this.uri = uri;
+        }),
+      },
+    };
+  });
+
+  it('does NOT render an iframe on Tizen', () => {
+    renderPlayer();
+    expect(screen.queryByTitle('YouTube video')).toBeNull();
+  });
+
+  it('shows a budget timer overlay instead of an iframe', () => {
+    renderPlayer();
+    expect(screen.getByText(/budget remaining/i)).toBeInTheDocument();
+  });
+
+  it('calls launchAppControl with the video ID in the URI', () => {
+    renderPlayer('tizenVideo');
+    const mock = (window as unknown as { tizen: { application: { launchAppControl: ReturnType<typeof vi.fn> } } }).tizen.application.launchAppControl;
+    expect(mock).toHaveBeenCalledTimes(1);
+    const ctrlArg = mock.mock.calls[0][0] as { uri: string };
+    expect(String(ctrlArg.uri ?? '')).toContain('tizenVideo');
+  });
+
+  it('calls startTicking on mount', () => {
+    const budget = makeBudget();
+    renderPlayer('v1', budget);
+    expect(budget.startTicking).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates home and stops ticking when app regains visibility (user pressed Back in YouTube)', () => {
+    const budget = makeBudget();
+    renderPlayer('v2', budget);
+    vi.mocked(budget.stopTicking).mockClear();
+
+    act(() => {
+      Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(budget.stopTicking).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+  });
+
+  it('navigates home when budget runs out', () => {
+    const budget = makeBudget({ remaining: 0 });
+    renderPlayer('v3', budget);
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 });
