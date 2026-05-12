@@ -1,4 +1,4 @@
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, LoadingDots, VideoCard } from './components';
@@ -58,13 +58,17 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     };
   }, [query, budgetCtl.remaining]);
 
-  // Screen-level LRUD container: focuses on mount, tracks last focused child.
+  // Screen-level LRUD container.
   const { ref: screenRef } = useFocusable({
     focusKey: 'SEARCH_SCREEN',
     trackChildren: true,
-    forceFocus: true,
     saveLastFocusedChild: true,
   });
+
+  // Focus the Back button as soon as this screen mounts.
+  useEffect(() => {
+    setFocus('SEARCH_BACK');
+  }, []);
 
   return (
     <div
@@ -78,7 +82,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
       }}
     >
       <header style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-        <Button variant="secondary" autoFocus onClick={() => navigate('/')}>
+        <Button id="SEARCH_BACK" variant="secondary" onClick={() => navigate('/')}>
           ← Back
         </Button>
         <div>

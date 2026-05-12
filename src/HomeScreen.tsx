@@ -1,4 +1,4 @@
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, LoadingDots } from './components';
@@ -166,15 +166,19 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
   const remainingLabel =
     budgetCtl.remaining >= 3600 ? formatHMS(budgetCtl.remaining) : formatMMSS(budgetCtl.remaining);
 
-  // Screen-level LRUD container: claims focus on mount and tracks last-focused child
-  // so arrow keys work as soon as the screen appears.
+  // Screen-level LRUD container: tracks children so arrow keys stay within the screen.
   const { ref: screenRef } = useFocusable({
     focusKey: 'HOME_SCREEN',
     trackChildren: true,
-    forceFocus: true,
     saveLastFocusedChild: true,
     preferredChildFocusKey: 'HOME_SEARCH',
   });
+
+  // Explicitly give LRUD focus to the search bar on mount — more reliable than
+  // forceFocus on a container because children are registered by the time this runs.
+  useEffect(() => {
+    setFocus('HOME_SEARCH');
+  }, []);
 
   return (
     <div

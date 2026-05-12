@@ -27,8 +27,6 @@ export function Button({
   const { ref, focused } = useFocusable({
     onEnterPress: () => btnRef.current?.click(),
     focusKey: rest.id,
-    // forceFocus: tell LRUD to claim focus on mount (used for autoFocus buttons like Back on SearchScreen).
-    forceFocus: autoFocus,
   });
   // Compose LRUD ref + btnRef onto the same DOM node.
   const composedRef = (el: HTMLButtonElement | null) => {
