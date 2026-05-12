@@ -9,6 +9,11 @@ param(
   [string]$Target = "tv"   # "tv" | "emulator"
 )
 
+# Certificate profile to use for signing.
+# "tvbudget"          -> registered with the real TV's DUID.
+# "tvbudget-emulator" -> registered with the emulator DUID (XTCJYJZXZBZVK).
+$CertProfile = if ($Target -eq "emulator") { "tvbudget-emulator" } else { "tvbudget" }
+
 $ErrorActionPreference = 'Stop'
 $env:TIZEN_TOOLS = "$env:USERPROFILE\.tizen-extension-platform\server\sdktools\data\tools"
 $env:Path = "$env:TIZEN_TOOLS\ide\bin;$env:TIZEN_TOOLS;$env:Path"
@@ -28,7 +33,7 @@ $cfg = [regex]::Replace($cfg, '<content src="https://tv-budget\.vercel\.app/[^"]
 Set-Content -Path $configPath -Value $cfg -NoNewline
 Write-Host "    cache-bust stamp: $stamp" -ForegroundColor DarkGray
 
-tizen package -t wgt -s tvbudget -- tizen
+tizen package -t wgt -s $CertProfile -- tizen
 if ($LASTEXITCODE -ne 0) { throw "package failed" }
 
 $wgt = Get-ChildItem "tizen\*.wgt" | Select-Object -First 1
@@ -42,20 +47,29 @@ if ($wgt.Name -ne $safeName) {
   $wgt = Get-Item $newPath
 }
 
+# For emulator: Tizen emulators auto-register with sdb when booted — no TCP connect needed.
+# Just confirm one is visible before we proceed.
+if ($Target -eq "emulator") {
+  Write-Host ">>> Checking for Tizen emulator in sdb devices ..." -ForegroundColor Cyan
+}
+
 $device = (sdb devices | Select-String 'device\s+\S+$' | ForEach-Object {
   $line = $_.ToString()
   $parts = $line -split '\s+'
   [PSCustomObject]@{ Serial = $parts[0]; Model = $parts[-1] }
 } | Where-Object {
   if ($Target -eq "emulator") {
-    $_.Model -like 'T-samsung-*'
+    $_.Serial -like '*emulator*' -or $_.Model -like '*Emulator*'
   } else {
-    $_.Model -notlike 'T-samsung-*'
+    $_.Serial -notlike '*emulator*' -and $_.Model -notlike '*Emulator*'
   }
 } | Select-Object -First 1)
 if (-not $device) {
   if ($Target -eq "emulator") {
-    Write-Host "No Tizen emulator connected. Open Tizen Studio -> Emulator Manager, launch a TV emulator, then run: sdb connect 127.0.0.1:26101" -ForegroundColor Yellow
+    Write-Host ""  -ForegroundColor Yellow
+    Write-Host "No Tizen emulator found after connect attempt." -ForegroundColor Yellow
+    Write-Host "Make sure the emulator is fully booted in Tizen Studio Emulator Manager" -ForegroundColor Yellow
+    Write-Host "before running this script." -ForegroundColor Yellow
   } else {
     Write-Host "No TV connected. Run: sdb connect <TV-IP>:26101" -ForegroundColor Yellow
   }

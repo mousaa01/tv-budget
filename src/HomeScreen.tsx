@@ -10,7 +10,7 @@ import type { UseBudget } from './useBudget';
 // ----------- Focusable sub-components for inline buttons -----------
 
 function SearchPlaceholder({ query, onPress }: { query: string; onPress: () => void }) {
-  const { ref, focused } = useFocusable({ onEnterPress: onPress });
+  const { ref, focused } = useFocusable({ onEnterPress: onPress, focusKey: 'HOME_SEARCH' });
   return (
     <button
       ref={ref as React.Ref<HTMLButtonElement>}
@@ -166,8 +166,19 @@ export function HomeScreen({ budgetCtl, onOpenSettings }: HomeProps) {
   const remainingLabel =
     budgetCtl.remaining >= 3600 ? formatHMS(budgetCtl.remaining) : formatMMSS(budgetCtl.remaining);
 
+  // Screen-level LRUD container: claims focus on mount and tracks last-focused child
+  // so arrow keys work as soon as the screen appears.
+  const { ref: screenRef } = useFocusable({
+    focusKey: 'HOME_SCREEN',
+    trackChildren: true,
+    forceFocus: true,
+    saveLastFocusedChild: true,
+    preferredChildFocusKey: 'HOME_SEARCH',
+  });
+
   return (
     <div
+      ref={screenRef as React.Ref<HTMLDivElement>}
       style={{
         height: '100%',
         overflowY: 'auto',

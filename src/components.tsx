@@ -1,6 +1,6 @@
 import { FocusContext, setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import type { ReactNode, ButtonHTMLAttributes } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { formatHMS, formatMMSS } from './format';
 
 /* ---------------- Button ---------------- */
@@ -22,16 +22,19 @@ export function Button({
   onClick,
   ...rest
 }: ButtonProps) {
+  // Separate ref for click() — avoids circular type-inference with useFocusable's ref.
+  const btnRef = useRef<HTMLButtonElement | null>(null);
   const { ref, focused } = useFocusable({
-    // TV remote OK/Enter press — trigger the real DOM click so onClick fires normally.
-    onEnterPress: () => (ref.current as HTMLButtonElement | null)?.click(),
+    onEnterPress: () => btnRef.current?.click(),
     focusKey: rest.id,
+    // forceFocus: tell LRUD to claim focus on mount (used for autoFocus buttons like Back on SearchScreen).
+    forceFocus: autoFocus,
   });
-
-  // autoFocus: move LRUD focus here on mount (e.g. first button in a modal).
-  useEffect(() => {
-    if (autoFocus) (ref.current as HTMLButtonElement | null)?.focus();
-  }, [autoFocus]);
+  // Compose LRUD ref + btnRef onto the same DOM node.
+  const composedRef = (el: HTMLButtonElement | null) => {
+    btnRef.current = el;
+    (ref as React.MutableRefObject<HTMLButtonElement | null>).current = el;
+  };
 
   const palette =
     variant === 'primary'
@@ -42,7 +45,7 @@ export function Button({
 
   return (
     <button
-      ref={ref as React.Ref<HTMLButtonElement>}
+      ref={composedRef}
       data-focusable
       className={focused ? 'focused' : undefined}
       onClick={onClick}

@@ -1,3 +1,4 @@
+import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, LoadingDots, VideoCard } from './components';
@@ -57,8 +58,17 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     };
   }, [query, budgetCtl.remaining]);
 
+  // Screen-level LRUD container: focuses on mount, tracks last focused child.
+  const { ref: screenRef } = useFocusable({
+    focusKey: 'SEARCH_SCREEN',
+    trackChildren: true,
+    forceFocus: true,
+    saveLastFocusedChild: true,
+  });
+
   return (
     <div
+      ref={screenRef as React.Ref<HTMLDivElement>}
       style={{
         height: '100%',
         padding: 'var(--space-6)',
