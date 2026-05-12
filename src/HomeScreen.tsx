@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoadingDots } from './components';
 import { formatMMSS, formatHMS } from './format';
-import { loadRecent, loadSubscribedChannels } from './storage';
-import type { RecentVideo, SubscribedChannel } from './types';
+import { loadSubscribedChannels } from './storage';
+import type { SubscribedChannel } from './types';
 import type { UseBudget } from './useBudget';
 
 // ----------- Focusable sub-components for inline buttons -----------
@@ -54,7 +54,7 @@ function ChannelButton({ channel, onPress }: { channel: SubscribedChannel; onPre
       onClick={onPress}
       title={channel.title}
       style={{
-        flex: '0 0 140px',
+        width: 200,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -70,62 +70,14 @@ function ChannelButton({ channel, onPress }: { channel: SubscribedChannel; onPre
         src={channel.thumbnail}
         alt=""
         loading="lazy"
-        style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface-2)' }}
+        style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface-2)' }}
       />
       <div style={{
-        fontSize: 15, fontWeight: 700, color: 'var(--text)', textAlign: 'center',
+        fontSize: 16, fontWeight: 700, color: 'var(--text)', textAlign: 'center',
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-        overflow: 'hidden', lineHeight: 1.2, minHeight: 36,
+        overflow: 'hidden', lineHeight: 1.2, minHeight: 38,
       }}>
         {channel.title}
-      </div>
-    </button>
-  );
-}
-
-function RecentButton({ video, disabled, onPress }: { video: RecentVideo; disabled: boolean; onPress: () => void }) {
-  const { ref, focused } = useFocusable({ onEnterPress: disabled ? undefined : onPress });
-  return (
-    <button
-      ref={disabled ? undefined : (ref as React.Ref<HTMLButtonElement>)}
-      data-focusable={!disabled || undefined}
-      className={focused && !disabled ? 'focused' : undefined}
-      disabled={disabled}
-      onClick={onPress}
-      style={{
-        flex: '0 0 260px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-        background: 'var(--surface)',
-        border: '2px solid var(--border)',
-        borderRadius: 'var(--radius-md)',
-        padding: 10,
-        textAlign: 'left',
-        opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? 'default' : 'pointer',
-      }}
-    >
-      <div style={{
-        width: '100%', aspectRatio: '16/9', borderRadius: 'var(--radius-sm)',
-        overflow: 'hidden', background: 'var(--surface-2)', position: 'relative', flexShrink: 0,
-      }}>
-        <img src={video.thumbnail} alt="" loading="lazy"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        <span className="tabular" style={{
-          position: 'absolute', right: 6, bottom: 6,
-          background: 'rgba(0,0,0,0.72)', color: '#fff',
-          fontSize: 16, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
-        }}>
-          {formatMMSS(video.durationSeconds)}
-        </span>
-      </div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)',
-        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {video.title}
-      </div>
-      <div style={{ fontSize: 16, color: 'var(--text-dim)', fontWeight: 600 }}>
-        {video.channelTitle}
       </div>
     </button>
   );
@@ -139,12 +91,10 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
-  const [recent, setRecent] = useState<RecentVideo[]>([]);
   const [channels, setChannels] = useState<SubscribedChannel[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setRecent(loadRecent());
     const meta = loadSubscribedChannels();
     setChannels(meta?.channels ?? []);
     // NOTE: do NOT auto-focus the search input — on TV that opens the on-screen
@@ -259,11 +209,10 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
           </div>
         ) : (
           <div
-            className="scroll-list"
             style={{
-              display: 'flex',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
               gap: 'var(--space-2)',
-              overflowX: 'auto',
               paddingBottom: 'var(--space-1)',
             }}
           >
@@ -274,33 +223,6 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
                 onPress={() => navigate(`/search?q=${encodeURIComponent(c.title)}`)}
               />
             ))}
-          </div>
-        )}
-      </section>
-
-      <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        <h2 className="t-h2" style={{ color: 'var(--accent)' }}>Recently watched</h2>
-        {recent.length === 0 ? null : (
-          <div
-            className="scroll-list"
-            style={{
-              display: 'flex',
-              gap: 'var(--space-3)',
-              overflowX: 'auto',
-              paddingBottom: 'var(--space-2)',
-              alignItems: 'flex-start',
-            }}
-          >
-            {recent.map((r) => {
-              const disabled = r.durationSeconds > budgetCtl.remaining;
-              return (
-                <RecentButton
-                  key={r.id}
-                  video={r}
-                  disabled={disabled}
-                  onPress={() => navigate(`/play/${r.id}?d=${r.durationSeconds}&title=${encodeURIComponent(r.title)}&channel=${encodeURIComponent(r.channelTitle)}`)}                />
-              );
-            })}
           </div>
         )}
       </section>
