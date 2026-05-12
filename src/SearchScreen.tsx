@@ -20,7 +20,6 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fits, setFits] = useState<VideoResult[]>([]);
-  const [tooLong, setTooLong] = useState<VideoResult[]>([]);
   const [subscribedSet, setSubscribedSet] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -42,7 +41,6 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
         const filtered = applyBlocklist(raw, settings.blocklistKeywords);
         const split = partitionByDuration(filtered, budgetCtl.remaining);
         setFits(split.fits);
-        setTooLong(split.tooLong);
       })
       .catch((e: unknown) => {
         if (cancelled) return;
