@@ -307,6 +307,17 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
   const title = searchParams.get('title') ?? '';
   const channelTitle = searchParams.get('channel') ?? '';
 
+  // Budget exhausted — stop playback and return home immediately.
+  // This covers both the WebPlayer and TizenPlayer paths in one place.
+  // WebPlayer has no per-second remaining-check of its own; without this
+  // guard it would let the iframe keep playing past zero budget.
+  useEffect(() => {
+    if (budgetCtl.remaining <= 0) {
+      budgetCtl.stopTicking();
+      navigate('/', { replace: true });
+    }
+  }, [budgetCtl.remaining, budgetCtl, navigate]);
+
   // Record to recent history on every play.
   useEffect(() => {
     if (!videoId) return;

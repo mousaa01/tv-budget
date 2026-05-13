@@ -260,6 +260,37 @@ describe('SearchScreen channel mode', () => {
     expect(fetchChannelFeedMock).toHaveBeenCalledTimes(2);
   });
 
+  it('hides too-long cards while auto-pagination is still searching for fits', async () => {
+    // The root cause of the "lag" bug: page 1 returns 0 fits + some tooLong
+    // videos. Previously they were shown as disabled cards immediately, then
+    // "went away" visually once fits were found on page 2. The fix: suppress
+    // tooLong cards whenever isStillLooking is true.
+    let resolvePage2!: (val: unknown) => void;
+    const page2Promise = new Promise<unknown>((resolve) => {
+      resolvePage2 = resolve;
+    });
+    fetchChannelFeedMock
+      .mockResolvedValueOnce({ videos: [makeVideo('long_p1', 4500)], nextPageToken: 'PAGE2' })
+      .mockReturnValueOnce(page2Promise); // page 2 is deliberately in-flight
+
+    renderChannel();
+
+    // Wait for auto-pagination to fire (page 2 fetch in-flight).
+    await waitFor(() => expect(fetchChannelFeedMock).toHaveBeenCalledTimes(2));
+
+    // While page 2 is pending, the tooLong card from page 1 must NOT be visible.
+    // isStillLooking = true (fits.length=0, nextPageToken set, pages<MAX).
+    expect(screen.queryByText('Video long_p1')).not.toBeInTheDocument();
+
+    // Resolve page 2 with a fit video.
+    resolvePage2({ videos: [makeVideo('fit_p2', 300)], nextPageToken: undefined });
+
+    // Now the fit appears, and the previously-suppressed tooLong card is revealed.
+    await waitFor(() => expect(screen.getByText('Video fit_p2')).toBeInTheDocument());
+    expect(screen.getByText('Video long_p1')).toBeInTheDocument();
+    expect(screen.getByText('Video long_p1').closest('button')).toBeDisabled();
+  });
+
   it('text search: low budget shows over-budget results as disabled, not as empty list', async () => {
     // Mock searchVideos via youtube module — re-mock the module per-test.
     const { searchVideos } = await import('./youtube');

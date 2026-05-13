@@ -165,6 +165,14 @@ describe('PlayerScreen (web/iframe branch)', () => {
     expect(budget.stopTicking).toHaveBeenCalled();
   });
 
+  it('navigates home immediately when budget is already exhausted (remaining = 0)', () => {
+    // If the player is opened with zero remaining budget — e.g. the parent
+    // navigated here manually after time ran out — we must redirect home
+    // rather than letting the iframe keep playing.
+    renderPlayer('vid_exhaust', makeBudget({ remaining: 0, noNewVideos: true }));
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+  });
+
   it('renders null when videoId is missing and navigates home', () => {
     mockNavigate.mockReset();
     render(

@@ -122,6 +122,16 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, loadingMore, error, isChannelMode, nextPageToken, fits.length]);
 
+  // True while we're still auto-paginating in search of a playable video.
+  // During this window we suppress the too-long disabled cards so the user
+  // doesn't see a flash of "can't-watch" content before fits have loaded.
+  // Auto-pagination only runs in channel mode when fits.length === 0, so
+  // this is always false in keyword-search mode (isChannelMode = false).
+  const isStillLooking =
+    isChannelMode &&
+    fits.length === 0 &&
+    (loading || loadingMore || (!!nextPageToken && autoPagesRef.current < MAX_AUTO_PAGES));
+
   // Screen-level LRUD container.
   const { ref: screenRef } = useFocusable({
     focusKey: 'SEARCH_SCREEN',
@@ -170,7 +180,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           </div>
         )}
 
-        {!loading && !error && fits.length === 0 && tooLong.length > 0 && (
+        {!loading && !error && fits.length === 0 && tooLong.length > 0 && !isStillLooking && (
           <div className="t-body" style={{ marginBottom: 'var(--space-3)' }}>
             None of these videos fit your remaining {formatMMSS(budgetCtl.remaining)}.
             They’re shown below so you can see what’s available — ask a parent for more time, or come back tomorrow.
@@ -209,9 +219,11 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               }}
             />
           ))}
-          {/* Too-long videos rendered as disabled cards so the user can see
-              what's available even if it doesn't fit their current budget. */}
-          {tooLong.map((v) => (
+          {/* Too-long videos rendered as disabled cards — but only once
+              auto-pagination has finished searching for playable videos.
+              Suppressing them during the search prevents the "flash of
+              disabled cards" that appeared before any fits were found. */}
+          {!isStillLooking && tooLong.map((v) => (
             <VideoCard
               key={`long-${v.id}`}
               thumbnail={v.thumbnail}
