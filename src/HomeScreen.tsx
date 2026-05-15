@@ -142,6 +142,7 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
   const [searching, setSearching] = useState(false);
   const [channels, setChannels] = useState<SubscribedChannel[]>([]);
   const [recent, setRecent] = useState<RecentVideo[]>([]);
+  const recentScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -336,27 +337,59 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
               Clear
             </Button>
           </div>
-          <div
-            className="scroll-list"
-            style={{
-              display: 'flex',
-              gap: 'var(--space-3)',
-              overflowX: 'auto',
-              paddingBottom: 'var(--space-2)',
-              alignItems: 'flex-start',
-            }}
-          >
-            {recent.map((r) => {
-              const disabled = r.durationSeconds > budgetCtl.remaining;
-              return (
-                <RecentButton
-                  key={r.id}
-                  video={r}
-                  disabled={disabled}
-                  onPress={() => navigate(`/play/${r.id}?d=${r.durationSeconds}&title=${encodeURIComponent(r.title)}&channel=${encodeURIComponent(r.channelTitle)}`)}
-                />
-              );
-            })}
+          <div style={{ position: 'relative' }}>
+            <button
+              aria-label="Scroll left"
+              onClick={() => {
+                recentScrollRef.current?.scrollBy({ left: -600, behavior: 'smooth' });
+              }}
+              style={{
+                position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
+                zIndex: 10, height: 64, width: 48,
+                background: 'var(--surface-2)', border: '2px solid var(--border)',
+                borderRadius: 'var(--radius-sm)', color: 'var(--text)',
+                fontSize: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >‹</button>
+            <div
+              ref={recentScrollRef}
+              className="scroll-list"
+              style={{
+                display: 'flex',
+                gap: 'var(--space-3)',
+                overflowX: 'auto',
+                paddingBottom: 'var(--space-2)',
+                paddingLeft: 56,
+                paddingRight: 56,
+                alignItems: 'flex-start',
+                scrollbarWidth: 'none',
+              }}
+            >
+              {recent.map((r) => {
+                const disabled = r.durationSeconds > budgetCtl.remaining;
+                return (
+                  <RecentButton
+                    key={r.id}
+                    video={r}
+                    disabled={disabled}
+                    onPress={() => navigate(`/play/${r.id}?d=${r.durationSeconds}&title=${encodeURIComponent(r.title)}&channel=${encodeURIComponent(r.channelTitle)}`)}
+                  />
+                );
+              })}
+            </div>
+            <button
+              aria-label="Scroll right"
+              onClick={() => {
+                recentScrollRef.current?.scrollBy({ left: 600, behavior: 'smooth' });
+              }}
+              style={{
+                position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+                zIndex: 10, height: 64, width: 48,
+                background: 'var(--surface-2)', border: '2px solid var(--border)',
+                borderRadius: 'var(--radius-sm)', color: 'var(--text)',
+                fontSize: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >›</button>
           </div>
         </section>
       )}
