@@ -3,6 +3,38 @@ import type { SubscribedChannel, VideoResult } from './types';
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3';
 
+// ---------------------------------------------------------------------------
+// Per-channel feed cache (localStorage, 1-hour TTL)
+// Caches the first page of hydrated VideoResult[] per channel so repeat
+// visits are instant — no API calls needed until the cache goes stale.
+// ---------------------------------------------------------------------------
+const FEED_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const FEED_CACHE_KEY_PREFIX = 'tv-budget:feed:';
+
+interface FeedCache {
+  videos: VideoResult[];
+  cachedAt: number;
+}
+
+function loadFeedCache(channelId: string): VideoResult[] | null {
+  try {
+    const raw = localStorage.getItem(FEED_CACHE_KEY_PREFIX + channelId);
+    if (!raw) return null;
+    const c = JSON.parse(raw) as FeedCache;
+    if (Date.now() - c.cachedAt > FEED_CACHE_TTL_MS) return null;
+    return c.videos;
+  } catch { return null; }
+}
+
+function saveFeedCache(channelId: string, videos: VideoResult[]): void {
+  try {
+    localStorage.setItem(
+      FEED_CACHE_KEY_PREFIX + channelId,
+      JSON.stringify({ videos, cachedAt: Date.now() } satisfies FeedCache),
+    );
+  } catch { /* ignore quota exceeded */ }
+}
+
 function getKey(): string {
   const k = import.meta.env.VITE_YT_API_KEY;
   if (!k) throw new Error('Missing VITE_YT_API_KEY in .env');
@@ -77,6 +109,12 @@ export async function fetchChannelFeed(
   channelId: string,
   pageToken?: string
 ): Promise<ChannelFeedPage> {
+  // Serve first page from cache if fresh — makes repeat channel visits instant.
+  if (!pageToken) {
+    const cached = loadFeedCache(channelId);
+    if (cached) return { videos: cached };
+  }
+
   const key = getKey();
   const playlistId = uploadsPlaylistId(channelId);
   const params = new URLSearchParams({
@@ -112,6 +150,8 @@ export async function fetchChannelFeed(
       },
     }));
   const videos = await hydrateDurations(items, key);
+  // Write first-page results to cache for instant repeat visits.
+  if (!pageToken) saveFeedCache(channelId, videos);
   return { videos, nextPageToken: data.nextPageToken };
 }
 

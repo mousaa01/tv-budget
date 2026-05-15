@@ -172,15 +172,25 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           </div>
         )}
 
-        {!loading && !error && fits.length === 0 && tooLong.length === 0 && (
+        {!loading && !error && fits.length === 0 && tooLong.length === 0 && !isStillLooking && (
           <div className="t-body">
             {isChannelMode
               ? `No videos from ${channelTitle} right now.`
-              : `No results for “${query}”.`}
+              : `No results for "${query}".`}
           </div>
         )}
 
-        {!loading && !error && fits.length === 0 && tooLong.length > 0 && !isStillLooking && (
+        {/* In channel mode: when nothing fits, say why — don't show greyed cards. */}
+        {!loading && !error && isChannelMode && fits.length === 0 && tooLong.length > 0 && !isStillLooking && (
+          <div className="t-body">
+            All videos from {channelTitle} are longer than your remaining time ({formatMMSS(budgetCtl.remaining)}).
+            Ask a parent for more time!
+          </div>
+        )}
+
+        {/* In keyword-search mode only: keep showing too-long results so the
+            user can see what's available and ask for more time. */}
+        {!loading && !error && !isChannelMode && fits.length === 0 && tooLong.length > 0 && (
           <div className="t-body" style={{ marginBottom: 'var(--space-3)' }}>
             None of these videos fit your remaining {formatMMSS(budgetCtl.remaining)}.
             They’re shown below so you can see what’s available — ask a parent for more time, or come back tomorrow.
@@ -219,11 +229,9 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               }}
             />
           ))}
-          {/* Too-long videos rendered as disabled cards — but only once
-              auto-pagination has finished searching for playable videos.
-              Suppressing them during the search prevents the "flash of
-              disabled cards" that appeared before any fits were found. */}
-          {!isStillLooking && tooLong.map((v) => (
+          {/* Too-long videos rendered as disabled cards only in keyword-search
+              mode — channel mode hides them entirely and shows a message instead. */}
+          {!isStillLooking && !isChannelMode && tooLong.map((v) => (
             <VideoCard
               key={`long-${v.id}`}
               thumbnail={v.thumbnail}

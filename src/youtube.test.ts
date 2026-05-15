@@ -14,6 +14,11 @@ import { fetchChannelFeed } from './youtube';
 const ORIGINAL_FETCH = globalThis.fetch;
 
 beforeEach(() => {
+  // Clear the localStorage feed cache so each test starts fresh — otherwise
+  // the first fetchChannelFeed call writes a cache entry that later tests
+  // would serve instead of hitting the per-test mocked fetch.
+  localStorage.clear();
+
   // Provide a stub VITE_YT_API_KEY for the module's getKey() call.
   // import.meta.env is read fresh on each invocation.
   (import.meta as unknown as { env: Record<string, string> }).env = {

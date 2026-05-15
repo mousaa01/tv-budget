@@ -137,10 +137,8 @@ describe('SearchScreen channel mode', () => {
     await act(async () => { fireEvent.click(screen.getByText('Load more videos')); });
     await waitFor(() => expect(screen.getByText('Video e')).toBeInTheDocument());
     expect(screen.getByText('Video g')).toBeInTheDocument();
-    // Video f (4000s) is too long for the 1h budget — appears as DISABLED card,
-    // not hidden, so the user knows the channel has more content.
-    expect(screen.getByText('Video f')).toBeInTheDocument();
-    expect(screen.getByText('Video f').closest('button')).toBeDisabled();
+    // Video f (4000s) is too long — in channel mode too-long cards are hidden entirely.
+    expect(screen.queryByText('Video f')).not.toBeInTheDocument();
 
     // Click load-more for page 3
     await act(async () => { fireEvent.click(screen.getByText('Load more videos')); });
@@ -226,11 +224,8 @@ describe('SearchScreen channel mode', () => {
       </MemoryRouter>,
     );
     await waitFor(() => expect(screen.getByText('Video short_ok')).toBeInTheDocument());
-    // The too-long video IS shown (as a disabled card) so the user knows it exists.
-    expect(screen.getByText('Video long_no')).toBeInTheDocument();
-    // ...but its card is disabled so it cannot be selected/navigated to.
-    const longBtn = screen.getByText('Video long_no').closest('button');
-    expect(longBtn).toBeDisabled();
+    // In channel mode, too-long cards are hidden entirely so the view stays clean.
+    expect(screen.queryByText('Video long_no')).not.toBeInTheDocument();
     const okBtn = screen.getByText('Video short_ok').closest('button');
     expect(okBtn).not.toBeDisabled();
   });
@@ -265,8 +260,8 @@ describe('SearchScreen channel mode', () => {
     // The 5-min video from page 2 must appear, and be enabled (not disabled).
     await waitFor(() => expect(screen.getByText('Video dudu_short')).toBeInTheDocument());
     expect(screen.getByText('Video dudu_short').closest('button')).not.toBeDisabled();
-    // The too-long videos still appear as disabled cards.
-    expect(screen.getByText('Video dudu1').closest('button')).toBeDisabled();
+    // In channel mode, too-long videos are hidden entirely.
+    expect(screen.queryByText('Video dudu1')).not.toBeInTheDocument();
     // Two pages fetched total.
     expect(fetchChannelFeedMock).toHaveBeenCalledTimes(2);
   });
@@ -296,10 +291,9 @@ describe('SearchScreen channel mode', () => {
     // Resolve page 2 with a fit video.
     resolvePage2({ videos: [makeVideo('fit_p2', 300)], nextPageToken: undefined });
 
-    // Now the fit appears, and the previously-suppressed tooLong card is revealed.
+    // Now the fit appears. In channel mode, tooLong cards stay hidden always.
     await waitFor(() => expect(screen.getByText('Video fit_p2')).toBeInTheDocument());
-    expect(screen.getByText('Video long_p1')).toBeInTheDocument();
-    expect(screen.getByText('Video long_p1').closest('button')).toBeDisabled();
+    expect(screen.queryByText('Video long_p1')).not.toBeInTheDocument();
   });
 
   it('text search: low budget shows over-budget results as disabled, not as empty list', async () => {
