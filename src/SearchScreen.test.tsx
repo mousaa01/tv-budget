@@ -31,7 +31,8 @@ vi.mock('./youtube', async (importActual) => {
 
 vi.mock('./storage', () => ({
   loadSettings: () => ({
-    dailyLimitMinutes: 60,
+    morningLimitMinutes: 60,
+    afternoonLimitMinutes: 60,
     blocklistKeywords: [],
     channelAllowlist: [],
     pin: '0000',
@@ -42,7 +43,16 @@ vi.mock('./storage', () => ({
 
 function makeBudget(remaining = 3600): UseBudget {
   return {
-    budget: { date: '2026-05-12', dailyLimitSeconds: remaining, secondsUsedToday: 0, bonusSecondsToday: 0 },
+    budget: {
+      date: '2026-05-12',
+      // Set both windows to `remaining` so tests pass regardless of clock time.
+      morningLimitSeconds: remaining,
+      morningSecondsUsed: 0,
+      morningBonusSeconds: 0,
+      afternoonLimitSeconds: remaining,
+      afternoonSecondsUsed: 0,
+      afternoonBonusSeconds: 0,
+    },
     remaining,
     noNewVideos: false,
     startTicking: vi.fn(),

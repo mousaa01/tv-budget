@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Modal, ScrollNav } from './components';
 import { formatHMS } from './format';
 import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, isTokenValid } from './oauth';
-import { clearSubscribedChannels, loadHistory, loadSettings, loadSubscribedChannels, saveSettings, saveSubscribedChannels } from './storage';
+import { clearSubscribedChannels, currentWindow, loadHistory, loadSettings, loadSubscribedChannels, saveSettings, saveSubscribedChannels } from './storage';
 import type { Settings, SubscribedChannelsMeta } from './types';
 import type { UseBudget } from './useBudget';
 
@@ -83,7 +83,8 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
   const save = () => {
     const cleaned: Settings = {
       ...settings,
-      dailyLimitMinutes: Math.max(15, Math.min(180, Math.round(settings.dailyLimitMinutes))),
+      morningLimitMinutes: Math.max(5, Math.min(120, Math.round(settings.morningLimitMinutes))),
+      afternoonLimitMinutes: Math.max(5, Math.min(120, Math.round(settings.afternoonLimitMinutes))),
     };
     saveSettings(cleaned);
     budgetCtl.refresh();
@@ -117,7 +118,7 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
   const priorDays = archived.filter((h) => h.date !== today);
   const todayRow = {
     date: today,
-    secondsUsed: budgetCtl.budget.secondsUsedToday,
+    secondsUsed: budgetCtl.budget.morningSecondsUsed + budgetCtl.budget.afternoonSecondsUsed,
     videosWatched: todayArchived?.videosWatched ?? 0,
   };
   const history = [todayRow, ...priorDays].slice(0, 7);
@@ -157,34 +158,58 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
         </>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-          {/* Daily limit */}
+          {/* Time limits per window */}
           <section>
-            <h3 className="t-h2">Daily time limit</h3>
+            <h3 className="t-h2">🌅 Morning budget (before 12 PM)</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
               <input
                 data-focusable
                 type="range"
-                min={15}
-                max={180}
+                min={5}
+                max={120}
                 step={5}
-                value={settings.dailyLimitMinutes}
-                onChange={(e) => setSettings({ ...settings, dailyLimitMinutes: Number(e.target.value) })}
+                value={settings.morningLimitMinutes}
+                onChange={(e) => setSettings({ ...settings, morningLimitMinutes: Number(e.target.value) })}
                 style={{ flex: 1 }}
               />
               <div className="tabular t-h2" style={{ minWidth: 120, textAlign: 'right' }}>
-                {settings.dailyLimitMinutes} min
+                {settings.morningLimitMinutes} min
               </div>
             </div>
           </section>
 
-          {/* Bonus minutes */}
           <section>
-            <h3 className="t-h2">Adjust today's time</h3>
+            <h3 className="t-h2">🌆 Afternoon budget (from 12 PM)</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+              <input
+                data-focusable
+                type="range"
+                min={5}
+                max={120}
+                step={5}
+                value={settings.afternoonLimitMinutes}
+                onChange={(e) => setSettings({ ...settings, afternoonLimitMinutes: Number(e.target.value) })}
+                style={{ flex: 1 }}
+              />
+              <div className="tabular t-h2" style={{ minWidth: 120, textAlign: 'right' }}>
+                {settings.afternoonLimitMinutes} min
+              </div>
+            </div>
+          </section>
+
+          {/* Bonus minutes — scoped to the current window */}
+          <section>
+            <h3 className="t-h2">Adjust {currentWindow() === 'morning' ? '🌅 morning' : '🌆 afternoon'} time</h3>
             <div className="t-meta" style={{ marginTop: 4 }}>
-              Currently: {settings.dailyLimitMinutes + Math.round(budgetCtl.budget.bonusSecondsToday / 60)} min total today
-              {budgetCtl.budget.bonusSecondsToday !== 0
-                ? ` (${budgetCtl.budget.bonusSecondsToday >= 0 ? '+' : ''}${Math.round(budgetCtl.budget.bonusSecondsToday / 60)} min bonus)`
-                : ''}
+              {currentWindow() === 'morning'
+                ? `Morning: ${settings.morningLimitMinutes + Math.round(budgetCtl.budget.morningBonusSeconds / 60)} min total
+                   ${budgetCtl.budget.morningBonusSeconds !== 0 ? ` (${budgetCtl.budget.morningBonusSeconds >= 0 ? '+' : ''}${Math.round(budgetCtl.budget.morningBonusSeconds / 60)} min)` : ''}`
+                : `Afternoon: ${settings.afternoonLimitMinutes + Math.round(budgetCtl.budget.afternoonBonusSeconds / 60)} min total
+                   ${budgetCtl.budget.afternoonBonusSeconds !== 0 ? ` (${budgetCtl.budget.afternoonBonusSeconds >= 0 ? '+' : ''}${Math.round(budgetCtl.budget.afternoonBonusSeconds / 60)} min)` : ''}`
+              }
+            </div>
+            <div className="t-meta" style={{ marginTop: 2, color: 'var(--text-dim)' }}>
+              Changes apply to the current window only and clear when it ends.
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)', flexWrap: 'wrap' }}>
               <Button variant="secondary" onClick={() => addBonus(-5)}>−5 min</Button>

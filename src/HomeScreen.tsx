@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, LoadingDots } from './components';
 import { formatMMSS, formatHMS } from './format';
 import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, isTokenValid } from './oauth';
-import { clearRecent, loadRecent, loadSubscribedChannels, saveSubscribedChannels } from './storage';
+import { clearRecent, currentWindow, loadRecent, loadSubscribedChannels, saveSubscribedChannels } from './storage';
 import type { RecentVideo, SubscribedChannel, SubscribedChannelsMeta } from './types';
 import type { UseBudget } from './useBudget';
 
@@ -193,6 +193,8 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
 
   const remainingLabel =
     budgetCtl.remaining >= 3600 ? formatHMS(budgetCtl.remaining) : formatMMSS(budgetCtl.remaining);
+  const win = currentWindow();
+  const windowLabel = win === 'morning' ? '🌅 Morning' : '🌆 Afternoon';
 
   // Screen-level LRUD container: tracks children so arrow keys stay within the screen.
   const { ref: screenRef } = useFocusable({
@@ -228,8 +230,10 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
           </h1>
           <p className="t-h2" style={{ color: 'var(--text-dim)', marginTop: 'var(--space-2)' }}>
             {budgetCtl.noNewVideos
-              ? "🎈 You're all done for today — come back tomorrow!"
-              : `⏰ ${remainingLabel} left today!`}
+              ? win === 'morning'
+                ? "🌅 Morning time's up — back after 12 PM!"
+                : "🎊 You're all done for today — come back tomorrow!"
+              : `⏰ ${windowLabel}: ${remainingLabel} left!`}
           </p>
         </div>
       </header>

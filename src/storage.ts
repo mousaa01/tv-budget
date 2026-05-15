@@ -15,7 +15,8 @@ export function todayStr(): string {
 
 const DEFAULT_SETTINGS: Settings = {
   pin: '1234',
-  dailyLimitMinutes: 30,
+  morningLimitMinutes: 30,
+  afternoonLimitMinutes: 30,
   blocklistKeywords: [],
   channelAllowlist: [],
   coolDownEnabled: false,
@@ -57,23 +58,41 @@ export function clearSubscribedChannels(): void {
   localStorage.removeItem(KEYS.subscriptions);
 }
 
+// Which time window is currently active.
+export function currentWindow(): 'morning' | 'afternoon' {
+  return new Date().getHours() < 12 ? 'morning' : 'afternoon';
+}
+
 export function loadBudget(): BudgetState {
   const settings = loadSettings();
-  const dailyLimitSeconds = settings.dailyLimitMinutes * 60;
+  const fresh: BudgetState = {
+    date: todayStr(),
+    morningLimitSeconds: settings.morningLimitMinutes * 60,
+    morningSecondsUsed: 0,
+    morningBonusSeconds: 0,
+    afternoonLimitSeconds: settings.afternoonLimitMinutes * 60,
+    afternoonSecondsUsed: 0,
+    afternoonBonusSeconds: 0,
+  };
   try {
     const raw = localStorage.getItem(KEYS.budget);
-    if (!raw) {
-      return { date: todayStr(), secondsUsedToday: 0, dailyLimitSeconds, bonusSecondsToday: 0 };
+    if (!raw) return fresh;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    // Migrate old single-window shape (had secondsUsedToday) → start fresh.
+    if ('secondsUsedToday' in parsed) return fresh;
+    const stored = parsed as unknown as BudgetState;
+    if (stored.date !== todayStr()) {
+      archiveDay(stored);
+      return fresh;
     }
-    const parsed = JSON.parse(raw) as BudgetState;
-    if (parsed.date !== todayStr()) {
-      // Archive yesterday and reset
-      archiveDay(parsed);
-      return { date: todayStr(), secondsUsedToday: 0, dailyLimitSeconds, bonusSecondsToday: 0 };
-    }
-    return { ...parsed, dailyLimitSeconds };
+    // Re-apply limit from settings in case the parent changed it since last save.
+    return {
+      ...stored,
+      morningLimitSeconds: settings.morningLimitMinutes * 60,
+      afternoonLimitSeconds: settings.afternoonLimitMinutes * 60,
+    };
   } catch {
-    return { date: todayStr(), secondsUsedToday: 0, dailyLimitSeconds, bonusSecondsToday: 0 };
+    return fresh;
   }
 }
 
@@ -82,7 +101,10 @@ export function saveBudget(b: BudgetState): void {
 }
 
 export function remainingSeconds(b: BudgetState): number {
-  return Math.max(0, b.dailyLimitSeconds + b.bonusSecondsToday - b.secondsUsedToday);
+  if (currentWindow() === 'morning') {
+    return Math.max(0, b.morningLimitSeconds + b.morningBonusSeconds - b.morningSecondsUsed);
+  }
+  return Math.max(0, b.afternoonLimitSeconds + b.afternoonBonusSeconds - b.afternoonSecondsUsed);
 }
 
 export function loadRecent(): RecentVideo[] {
@@ -115,7 +137,8 @@ function archiveDay(b: BudgetState): void {
   const history = loadHistory();
   history.unshift({
     date: b.date,
-    secondsUsed: b.secondsUsedToday,
+    // Total across both windows for the history display.
+    secondsUsed: b.morningSecondsUsed + b.afternoonSecondsUsed,
     videosWatched: 0,
   });
   localStorage.setItem(KEYS.history, JSON.stringify(history.slice(0, 30)));

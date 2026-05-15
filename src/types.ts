@@ -13,9 +13,14 @@ export interface RecentVideo extends VideoResult {
 
 export interface BudgetState {
   date: string; // YYYY-MM-DD
-  secondsUsedToday: number;
-  dailyLimitSeconds: number;
-  bonusSecondsToday: number;
+  // Morning window: 00:00 → 11:59
+  morningLimitSeconds: number;
+  morningSecondsUsed: number;
+  morningBonusSeconds: number;
+  // Afternoon window: 12:00 → 23:59
+  afternoonLimitSeconds: number;
+  afternoonSecondsUsed: number;
+  afternoonBonusSeconds: number;
 }
 
 export interface DailySummary {
@@ -26,7 +31,8 @@ export interface DailySummary {
 
 export interface Settings {
   pin: string;
-  dailyLimitMinutes: number;
+  morningLimitMinutes: number;   // budget before 12 PM, default 30
+  afternoonLimitMinutes: number; // budget from 12 PM, default 30
   blocklistKeywords: string[];
   channelAllowlist: string[];
   coolDownEnabled: boolean;

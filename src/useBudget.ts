@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BudgetState } from './types';
-import { loadBudget, remainingSeconds, saveBudget, todayStr } from './storage';
+import { loadBudget, remainingSeconds, saveBudget, todayStr, currentWindow } from './storage';
 
 export interface UseBudget {
   budget: BudgetState;
@@ -42,7 +42,10 @@ export function useBudget(): UseBudget {
     tickingRef.current = true;
     intervalRef.current = window.setInterval(() => {
       setBudget((prev) => {
-        const next = { ...prev, secondsUsedToday: prev.secondsUsedToday + 1 };
+        const w = currentWindow();
+        const next = w === 'morning'
+          ? { ...prev, morningSecondsUsed: prev.morningSecondsUsed + 1 }
+          : { ...prev, afternoonSecondsUsed: prev.afternoonSecondsUsed + 1 };
         persistAccumRef.current += 1;
         if (persistAccumRef.current >= 10) {
           saveBudget(next);
@@ -71,10 +74,10 @@ export function useBudget(): UseBudget {
       if (consumeIfLow) {
         const rem = remainingSeconds(prev);
         if (rem > 0 && rem < 120) {
-          next = {
-            ...prev,
-            secondsUsedToday: prev.dailyLimitSeconds + prev.bonusSecondsToday,
-          };
+          const w = currentWindow();
+          next = w === 'morning'
+            ? { ...prev, morningSecondsUsed: prev.morningLimitSeconds + prev.morningBonusSeconds }
+            : { ...prev, afternoonSecondsUsed: prev.afternoonLimitSeconds + prev.afternoonBonusSeconds };
         }
       }
       saveBudget(next);
@@ -91,7 +94,10 @@ export function useBudget(): UseBudget {
 
   const addBonusSeconds = useCallback((s: number) => {
     setBudget((prev) => {
-      const next = { ...prev, bonusSecondsToday: prev.bonusSecondsToday + s };
+      const w = currentWindow();
+      const next = w === 'morning'
+        ? { ...prev, morningBonusSeconds: prev.morningBonusSeconds + s }
+        : { ...prev, afternoonBonusSeconds: prev.afternoonBonusSeconds + s };
       saveBudget(next);
       return next;
     });

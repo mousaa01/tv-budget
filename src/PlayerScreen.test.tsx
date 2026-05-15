@@ -24,7 +24,15 @@ vi.mock('react-router-dom', async (importActual) => {
 
 function makeBudget(overrides: Partial<UseBudget> = {}): UseBudget {
   return {
-    budget: { date: '2026-05-12', dailyLimitSeconds: 3600, secondsUsedToday: 0, bonusSecondsToday: 0 },
+    budget: {
+      date: '2026-05-12',
+      morningLimitSeconds: 3600,
+      morningSecondsUsed: 0,
+      morningBonusSeconds: 0,
+      afternoonLimitSeconds: 3600,
+      afternoonSecondsUsed: 0,
+      afternoonBonusSeconds: 0,
+    },
     remaining: 3600,
     noNewVideos: false,
     startTicking: vi.fn(),

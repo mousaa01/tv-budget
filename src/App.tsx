@@ -84,7 +84,7 @@ export default function App() {
       {!onPlayer && <BackgroundIllustrations />}
       <TimerOverlay
         remainingSeconds={budgetCtl.remaining}
-        usedSeconds={budgetCtl.budget.secondsUsedToday}
+        usedSeconds={budgetCtl.budget.morningSecondsUsed + budgetCtl.budget.afternoonSecondsUsed}
       />
       <FiveMinuteWarning trigger={budgetCtl.fiveMinuteWarning} />
       {!onPlayer && (
