@@ -114,7 +114,9 @@ async function fetchSubsWith(
     const params = new URLSearchParams({
       part: 'snippet',
       maxResults: '50',
-      order: 'alphabetical',
+      // NOTE: do NOT use order:'alphabetical' here — YouTube's API has a known bug
+      // where server-side alphabetical pagination silently drops some subscriptions.
+      // We sort client-side instead (see after the loop).
       ...baseParams,
     });
     if (pageToken) params.set('pageToken', pageToken);
@@ -149,6 +151,10 @@ async function fetchSubsWith(
     }
     pageToken = data.nextPageToken;
   } while (pageToken);
+
+  // Sort alphabetically client-side so display order is consistent without
+  // relying on the buggy server-side order=alphabetical parameter.
+  channels.sort((a, b) => a.title.localeCompare(b.title));
 
   return channels;
 }
