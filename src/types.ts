@@ -36,6 +36,7 @@ export interface Settings {
   blocklistKeywords: string[];
   channelAllowlist: string[];
   coolDownEnabled: boolean;
+  pinnedChannels: SubscribedChannel[];
 }
 
 export interface SubscribedChannel {

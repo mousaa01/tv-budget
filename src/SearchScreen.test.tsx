@@ -35,6 +35,7 @@ vi.mock('./storage', () => ({
     afternoonLimitMinutes: 60,
     blocklistKeywords: [],
     channelAllowlist: [],
+    pinnedChannels: [],
     pin: '0000',
     coolDownEnabled: false,
   }),

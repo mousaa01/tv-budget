@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: Settings = {
   blocklistKeywords: [],
   channelAllowlist: [],
   coolDownEnabled: false,
+  pinnedChannels: [],
 };
 
 export function loadSettings(): Settings {

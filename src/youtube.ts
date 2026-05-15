@@ -1,5 +1,5 @@
 import { parse, toSeconds } from 'iso8601-duration';
-import type { VideoResult } from './types';
+import type { SubscribedChannel, VideoResult } from './types';
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3';
 
@@ -219,4 +219,76 @@ export function partitionByDuration(
     else tooLong.push(r);
   }
   return { fits, tooLong };
+}
+
+interface ChannelsListResponse {
+  items?: Array<{
+    id: string;
+    snippet: {
+      title: string;
+      thumbnails?: {
+        default?: { url: string };
+        medium?: { url: string };
+        high?: { url: string };
+      };
+    };
+  }>;
+}
+
+/**
+ * Looks up a YouTube channel's metadata (id, title, thumbnail) from a
+ * channel ID, @handle, or YouTube URL. Uses channels.list (1 quota unit).
+ *
+ * Accepted input formats:
+ *   - https://www.youtube.com/@DisneyJunior
+ *   - https://www.youtube.com/channel/UCxxxx
+ *   - @DisneyJunior
+ *   - UCxxxx (24-char channel ID)
+ *   - DisneyJunior  (plain name, tried as @handle)
+ */
+export async function lookupChannel(input: string): Promise<SubscribedChannel> {
+  const key = getKey();
+  const trimmed = input.trim().replace(/\/+$/, '');
+
+  // Parse common YouTube URL shapes
+  let resolved = trimmed;
+  const ytUrl = trimmed.match(
+    /youtube\.com\/(?:@([\w.-]+)|channel\/(UC[\w-]+)|c\/([\w.-]+)|user\/([\w.-]+))/i,
+  );
+  if (ytUrl) {
+    if (ytUrl[2]) resolved = ytUrl[2];             // /channel/UCxxx → channel ID
+    else if (ytUrl[1]) resolved = '@' + ytUrl[1];  // /@handle
+    else if (ytUrl[3]) resolved = '@' + ytUrl[3];  // /c/name → try as handle
+    else if (ytUrl[4]) resolved = ytUrl[4];        // /user/name
+  }
+
+  const params = new URLSearchParams({ key, part: 'snippet' });
+  if (/^UC[\w-]{22}$/.test(resolved)) {
+    params.set('id', resolved);
+  } else if (resolved.startsWith('@')) {
+    params.set('forHandle', resolved);
+  } else {
+    // Plain text (no @) — prepend @ and try as handle
+    params.set('forHandle', '@' + resolved);
+  }
+
+  const res = await fetch(`${API_BASE}/channels?${params}`);
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const e = (await res.json()) as { error?: { message?: string } };
+      detail = e.error?.message ?? '';
+    } catch { /* ignore */ }
+    throw new Error(`Channel lookup failed (${res.status})${detail ? `: ${detail}` : ''}`);
+  }
+  const data = (await res.json()) as ChannelsListResponse;
+  const item = data.items?.[0];
+  if (!item) throw new Error('Channel not found — check the URL or @handle and try again');
+
+  const t = item.snippet.thumbnails;
+  return {
+    id: item.id,
+    title: item.snippet.title,
+    thumbnail: t?.medium?.url ?? t?.high?.url ?? t?.default?.url ?? '',
+  };
 }

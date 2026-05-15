@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, LoadingDots } from './components';
 import { formatMMSS, formatHMS } from './format';
 import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, isTokenValid } from './oauth';
-import { clearRecent, currentWindow, loadRecent, loadSubscribedChannels, saveSubscribedChannels } from './storage';
+  import { clearRecent, currentWindow, loadRecent, loadSettings, loadSubscribedChannels, saveSubscribedChannels } from './storage';
 import type { RecentVideo, SubscribedChannel, SubscribedChannelsMeta } from './types';
 import type { UseBudget } from './useBudget';
 
@@ -146,7 +146,9 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
 
   useEffect(() => {
     const meta = loadSubscribedChannels();
-    setChannels(meta?.channels ?? []);
+    const pinned = loadSettings().pinnedChannels ?? [];
+    const syncedIds = new Set((meta?.channels ?? []).map((c) => c.id));
+    setChannels([...(meta?.channels ?? []), ...pinned.filter((p) => !syncedIds.has(p.id))]);
     setRecent(loadRecent());
   }, []);
 
@@ -172,7 +174,9 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
         syncedAt: new Date().toISOString(),
       };
       saveSubscribedChannels(updated);
-      setChannels(fresh);
+      const pinned = loadSettings().pinnedChannels ?? [];
+      const syncedIds = new Set(fresh.map((c) => c.id));
+      setChannels([...fresh, ...pinned.filter((p) => !syncedIds.has(p.id))]);
     } catch (e) {
       setRefreshError(e instanceof Error ? e.message : String(e));
     } finally {
