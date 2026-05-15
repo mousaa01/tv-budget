@@ -110,6 +110,48 @@ describe('PlayerScreen (web/iframe branch)', () => {
     expect(budget.stopTicking).toHaveBeenCalled();
   });
 
+  it('YT_PAUSED does NOT call stopTicking with consumeIfLow — mid-video buffering must not eat the budget', () => {
+    // This is the root cause of the "kicked out 2-3 mins early" bug:
+    // YouTube's iframe fires YT_PAUSED during buffering. If stopTicking consumed
+    // sub-2-min budget on every pause, the user would be evicted before the
+    // video finished. The fix: YT_PAUSED calls stopTicking() with no argument
+    // (consumeIfLow defaults to false).
+    const budget = makeBudget();
+    renderPlayer('vidPause', budget);
+    vi.mocked(budget.stopTicking).mockClear();
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 2 } }), // YT_PAUSED
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+
+    expect(budget.stopTicking).toHaveBeenCalledTimes(1);
+    // Must NOT pass true — no sub-2-min consumption on a pause.
+    expect(budget.stopTicking).toHaveBeenCalledWith(); // called with zero args
+  });
+
+  it('YT_ENDED calls stopTicking(true) then navigates — consuming sub-2-min leftover on natural completion', () => {
+    const budget = makeBudget();
+    renderPlayer('vidEnd', budget);
+    vi.mocked(budget.stopTicking).mockClear();
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 0 } }), // YT_ENDED
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+
+    expect(budget.stopTicking).toHaveBeenCalledWith(true);
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+  });
+
   it('navigates home on Escape key', () => {
     renderPlayer();
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
@@ -227,7 +269,7 @@ describe('PlayerScreen (Tizen/native-app branch)', () => {
     expect(budget.startTicking).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates home and stops ticking when app regains visibility (user pressed Back in YouTube)', () => {
+  it('navigates home and stops ticking with consumeIfLow=true when app regains visibility (user pressed Back in YouTube)', () => {
     const budget = makeBudget();
     renderPlayer('v2', budget);
     vi.mocked(budget.stopTicking).mockClear();
@@ -237,7 +279,9 @@ describe('PlayerScreen (Tizen/native-app branch)', () => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
 
-    expect(budget.stopTicking).toHaveBeenCalled();
+    // Must pass true: this is the end of the video session, sub-2-min leftovers
+    // should be consumed to avoid leaving an unusable orphan budget.
+    expect(budget.stopTicking).toHaveBeenCalledWith(true);
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 

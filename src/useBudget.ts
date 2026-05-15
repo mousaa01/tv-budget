@@ -7,7 +7,7 @@ export interface UseBudget {
   remaining: number;
   noNewVideos: boolean;
   startTicking: () => void;
-  stopTicking: () => void;
+  stopTicking: (consumeIfLow?: boolean) => void;
   addBonusSeconds: (s: number) => void;
   refresh: () => void;
   fiveMinuteWarning: number; // increments when the 5-min mark is crossed
@@ -53,23 +53,29 @@ export function useBudget(): UseBudget {
     }, 1000);
   }, []);
 
-  const stopTicking = useCallback(() => {
+  // consumeIfLow: pass true ONLY when the video session has genuinely ended
+  // (video completed or user pressed Back). When false/omitted the sub-2-min
+  // consumption is skipped, preventing mid-video buffering pauses from
+  // eating the remaining budget and kicking the user home early.
+  const stopTicking = useCallback((consumeIfLow = false) => {
     if (!tickingRef.current) return;
     tickingRef.current = false;
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    // Always persist on stop. Also: if less than 2 minutes remain after this
-    // video, consume the remainder so we don't leave a sub-2-min orphan budget.
+    // Always persist on stop. Optionally consume a sub-2-min leftover so the
+    // child isn't stranded with an amount that can't start another video.
     setBudget((prev) => {
       let next = prev;
-      const rem = remainingSeconds(prev);
-      if (rem > 0 && rem < 120) {
-        next = {
-          ...prev,
-          secondsUsedToday: prev.dailyLimitSeconds + prev.bonusSecondsToday,
-        };
+      if (consumeIfLow) {
+        const rem = remainingSeconds(prev);
+        if (rem > 0 && rem < 120) {
+          next = {
+            ...prev,
+            secondsUsedToday: prev.dailyLimitSeconds + prev.bonusSecondsToday,
+          };
+        }
       }
       saveBudget(next);
       persistAccumRef.current = 0;

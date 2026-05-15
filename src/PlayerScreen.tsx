@@ -92,12 +92,15 @@ function TizenPlayer({ videoId, title, knownDuration, budgetCtl }: TizenPlayerPr
   useEffect(() => {
     const onVisible = () => {
       if (!document.hidden) {
-        budgetCtl.stopTicking();
+        // Video session ended (user pressed Back in YouTube app).
+        // Pass true so a sub-2-min budget leftover is consumed rather than
+        // left as an unusable orphan.
+        budgetCtl.stopTicking(true);
         navigate('/', { replace: true });
       }
     };
     const onPageShow = () => {
-      budgetCtl.stopTicking();
+      budgetCtl.stopTicking(true); // session ended — consume any sub-2-min leftover
       navigate('/', { replace: true });
     };
     document.addEventListener('visibilitychange', onVisible);
@@ -211,8 +214,13 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         const state: number | undefined = data?.info?.playerState ?? data?.playerState;
         if (state === YT_PLAYING) budgetCtl.startTicking();
-        else if (state === YT_PAUSED) budgetCtl.stopTicking();
-        else if (state === YT_ENDED) navigate('/', { replace: true });
+        else if (state === YT_PAUSED) budgetCtl.stopTicking(); // mid-video — do NOT consume sub-2-min remainder
+        else if (state === YT_ENDED) {
+          // Video completed naturally. Consume any sub-2-min budget leftover
+          // before navigating so the child isn't stranded with unusable seconds.
+          budgetCtl.stopTicking(true);
+          navigate('/', { replace: true });
+        }
       } catch { /* ignore */ }
     };
     window.addEventListener('message', handler);
