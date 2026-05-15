@@ -4,7 +4,8 @@ import { BackgroundIllustrations } from './BackgroundIllustrations';
 import { Button, FiveMinuteWarning, LoadingDots, TimerOverlay } from './components';
 import { HomeScreen } from './HomeScreen';
 import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, parseTokenFromHash } from './oauth';
-import { clearSubscribedChannels, loadSubscribedChannels, saveSubscribedChannels } from './storage';
+import { clearSubscribedChannels, loadSettings, loadSubscribedChannels, saveSettings, saveSubscribedChannels } from './storage';
+import { loadSettingsFromDrive } from './drive';
 import { SignInScreen, AccountBadge } from './SignInScreen';
 import { TimesUpScreen } from './TimesUpScreen';
 import type { SubscribedChannelsMeta } from './types';
@@ -44,6 +45,16 @@ export default function App() {
         };
         saveSubscribedChannels(meta);
         setAuth(meta);
+
+        // Pull settings from Drive and merge with local — e.g. parent may have
+        // updated PIN or time limits on their phone since last sign-in.
+        loadSettingsFromDrive(parsed.token).then((driveSettings) => {
+          if (driveSettings) {
+            saveSettings({ ...loadSettings(), ...driveSettings });
+            budgetCtl.refresh();
+          }
+        });
+
         if (channels.length === 0) {
           setAuthError(
             "Signed in, but YouTube returned 0 subscribed channels. Your subscriptions may be set to private in your YouTube account settings.",
@@ -59,11 +70,26 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
-  // Auto-close settings whenever route changes — prevents the modal from
-  // bleeding into the player screen (which used to leave half the screen white).
+  // Auto-close settings whenever route changes.
   useEffect(() => {
     setSettingsOpen(false);
   }, [location.pathname]);
+
+  // Background Drive sync on startup: if the user is already signed in (token
+  // loaded from localStorage), quietly pull the latest settings from Drive
+  // once so any changes made on another device (e.g. parent's phone) are
+  // applied without requiring a fresh sign-in.
+  useEffect(() => {
+    if (!auth) return;
+    loadSettingsFromDrive(auth.accessToken).then((driveSettings) => {
+      if (driveSettings) {
+        saveSettings({ ...loadSettings(), ...driveSettings });
+        budgetCtl.refresh();
+      }
+    });
+  // Run only once on mount — budgetCtl.refresh is stable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sign-in gate: no auth yet → show sign-in landing
   if (!auth) {

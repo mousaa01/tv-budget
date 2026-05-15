@@ -5,6 +5,7 @@ import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, isTokenValid }
 import { clearSubscribedChannels, currentWindow, loadHistory, loadSettings, loadSubscribedChannels, saveSettings, saveSubscribedChannels } from './storage';
 import type { Settings, SubscribedChannel, SubscribedChannelsMeta } from './types';
 import { lookupChannel } from './youtube';
+import { saveSettingsToDrive } from './drive';
 import type { UseBudget } from './useBudget';
 
 interface SettingsModalProps {
@@ -92,6 +93,9 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
     };
     saveSettings(cleaned);
     budgetCtl.refresh();
+    // Sync to Drive in the background — best-effort, never blocks the UI.
+    const token = loadSubscribedChannels()?.accessToken;
+    if (token) void saveSettingsToDrive(token, cleaned);
     setSavedToast(true);
     window.setTimeout(() => setSavedToast(false), 1500);
   };

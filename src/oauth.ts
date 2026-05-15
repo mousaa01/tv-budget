@@ -2,6 +2,10 @@ const SCOPE = [
   'https://www.googleapis.com/auth/youtube.readonly',
   'https://www.googleapis.com/auth/userinfo.profile',
   'https://www.googleapis.com/auth/userinfo.email',
+  // Settings are synced to Drive appDataFolder (hidden app folder, not visible
+  // in the user's regular Drive). Tokens from before this change won't have
+  // this scope — Drive calls gracefully fall back to localStorage in that case.
+  'https://www.googleapis.com/auth/drive.appdata',
 ].join(' ');
 
 function getClientId(): string {
