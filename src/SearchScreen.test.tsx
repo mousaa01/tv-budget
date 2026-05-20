@@ -55,6 +55,7 @@ function makeBudget(remaining = 3600): UseBudget {
       afternoonBonusSeconds: 0,
     },
     remaining,
+    remainingRef: { current: remaining },
     noNewVideos: false,
     startTicking: vi.fn(),
     stopTicking: vi.fn(),

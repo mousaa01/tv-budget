@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+﻿import { memo, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { WindDownBanner } from './components';
 import { formatMMSS } from './format';
@@ -175,7 +175,7 @@ interface WebPlayerProps {
   budgetCtl: UseBudget;
 }
 
-function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
+function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   const navigate = useNavigate();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [showTwoMin, setShowTwoMin] = useState(false);
@@ -225,10 +225,12 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [navigate, budgetCtl]);
+  // startTicking and stopTicking are stable useCallback refs — this effect
+  // registers once and never needs to re-register.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, budgetCtl.startTicking, budgetCtl.stopTicking]);
 
-  const remainingRef = useRef(budgetCtl.remaining);
-  useEffect(() => { remainingRef.current = budgetCtl.remaining; }, [budgetCtl.remaining]);
+  const { remainingRef } = budgetCtl;
 
   useEffect(() => {
     const start = Date.now();
@@ -303,6 +305,14 @@ function WebPlayer({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
     </div>
   );
 }
+
+// Memoized with a custom comparator: only re-render when the video changes.
+// budgetCtl reference changes every second (budget tick) but WebPlayer reads
+// time-sensitive values through budgetCtl.remainingRef (always-current ref)
+// and uses stable startTicking / stopTicking callbacks — no re-render needed.
+const WebPlayer = memo(WebPlayerImpl, (prev, next) =>
+  prev.videoId === next.videoId && prev.knownDuration === next.knownDuration,
+);
 
 // â”€â”€â”€ Route component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

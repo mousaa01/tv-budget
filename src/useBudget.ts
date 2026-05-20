@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type React from 'react';
 import type { BudgetState } from './types';
 import { loadBudget, remainingSeconds, saveBudget, todayStr, currentWindow } from './storage';
 
 export interface UseBudget {
   budget: BudgetState;
   remaining: number;
+  /** Ref that always holds the current remaining seconds — read this inside
+   * memoized child components without needing to re-render on every tick. */
+  remainingRef: React.MutableRefObject<number>;
   noNewVideos: boolean;
   startTicking: () => void;
   stopTicking: (consumeIfLow?: boolean) => void;
   addBonusSeconds: (s: number) => void;
   refresh: () => void;
-  fiveMinuteWarning: number; // increments when the 5-min mark is crossed
+  fiveMinuteWarning: number;
 }
 
 export function useBudget(): UseBudget {
@@ -105,6 +109,10 @@ export function useBudget(): UseBudget {
 
   const remaining = remainingSeconds(budget);
   const noNewVideos = remaining <= 0;
+  // Always-current ref: memoized child components (e.g. WebPlayer) read this
+  // directly so they don't need to re-render on every 1-second budget tick.
+  const remainingRef = useRef(remaining);
+  remainingRef.current = remaining;
 
   // 5-minute warning: fire when remaining first drops to <=300s. Re-arm if
   // remaining is bumped back above the threshold (e.g. parent grants bonus,
@@ -128,5 +136,5 @@ export function useBudget(): UseBudget {
     }
   }, [remaining, budget.date]);
 
-  return { budget, remaining, noNewVideos, startTicking, stopTicking, addBonusSeconds, refresh, fiveMinuteWarning };
+  return { budget, remaining, remainingRef, noNewVideos, startTicking, stopTicking, addBonusSeconds, refresh, fiveMinuteWarning };
 }

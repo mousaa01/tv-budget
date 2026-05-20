@@ -23,6 +23,7 @@ vi.mock('react-router-dom', async (importActual) => {
 });
 
 function makeBudget(overrides: Partial<UseBudget> = {}): UseBudget {
+  const remaining = overrides.remaining ?? 3600;
   return {
     budget: {
       date: '2026-05-12',
@@ -33,7 +34,8 @@ function makeBudget(overrides: Partial<UseBudget> = {}): UseBudget {
       afternoonSecondsUsed: 0,
       afternoonBonusSeconds: 0,
     },
-    remaining: 3600,
+    remaining,
+    remainingRef: { current: remaining },
     noNewVideos: false,
     startTicking: vi.fn(),
     stopTicking: vi.fn(),
