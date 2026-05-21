@@ -20,7 +20,7 @@ export interface UseBudget {
 export function useBudget(): UseBudget {
   const [budget, setBudget] = useState<BudgetState>(() => loadBudget());
   const tickingRef = useRef(false);
-  const persistAccumRef = useRef(0);
+  const tickStartRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
   const [fiveMinuteWarning, setFiveMinuteWarning] = useState(0);
   const warnedForRef = useRef<string | null>(null); // date the warning fired for
@@ -44,20 +44,32 @@ export function useBudget(): UseBudget {
   const startTicking = useCallback(() => {
     if (tickingRef.current) return;
     tickingRef.current = true;
+    tickStartRef.current = Date.now();
+    // Persist elapsed seconds to localStorage every 10 s without calling
+    // setBudget — eliminates per-second React re-renders during video playback.
+    // Also detects the 5-minute budget crossing so the warning still fires.
     intervalRef.current = window.setInterval(() => {
-      setBudget((prev) => {
-        const w = currentWindow();
-        const next = w === 'morning'
-          ? { ...prev, morningSecondsUsed: prev.morningSecondsUsed + 1 }
-          : { ...prev, afternoonSecondsUsed: prev.afternoonSecondsUsed + 1 };
-        persistAccumRef.current += 1;
-        if (persistAccumRef.current >= 10) {
-          saveBudget(next);
-          persistAccumRef.current = 0;
-        }
-        return next;
-      });
-    }, 1000);
+      if (tickStartRef.current === null) return;
+      const elapsed = Math.round((Date.now() - tickStartRef.current) / 1000);
+      if (elapsed === 0) return;
+      tickStartRef.current = Date.now(); // re-anchor to avoid double-counting at stopTicking
+      const snap = loadBudget();
+      const w = currentWindow();
+      const next = w === 'morning'
+        ? { ...snap, morningSecondsUsed: snap.morningSecondsUsed + elapsed }
+        : { ...snap, afternoonSecondsUsed: snap.afternoonSecondsUsed + elapsed };
+      saveBudget(next);
+      // Fire the 5-minute warning if budget crossed ≤300 s during this interval.
+      if (
+        remainingSeconds(snap) > 300 &&
+        remainingSeconds(next) <= 300 &&
+        remainingSeconds(next) > 0 &&
+        warnedForRef.current !== next.date
+      ) {
+        warnedForRef.current = next.date;
+        setFiveMinuteWarning((n) => n + 1);
+      }
+    }, 10_000);
   }, []);
 
   // consumeIfLow: pass true ONLY when the video session has genuinely ended
@@ -71,21 +83,29 @@ export function useBudget(): UseBudget {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    // Always persist on stop. Optionally consume a sub-2-min leftover so the
-    // child isn't stranded with an amount that can't start another video.
+    // Flush any seconds elapsed since the last localStorage-only write.
+    // Load from localStorage so that persistence-interval writes are included.
+    const elapsed = tickStartRef.current !== null
+      ? Math.round((Date.now() - tickStartRef.current) / 1000)
+      : 0;
+    tickStartRef.current = null;
     setBudget((prev) => {
-      let next = prev;
+      const base = elapsed > 0 ? loadBudget() : prev;
+      const w = currentWindow();
+      let next = elapsed > 0
+        ? (w === 'morning'
+            ? { ...base, morningSecondsUsed: base.morningSecondsUsed + elapsed }
+            : { ...base, afternoonSecondsUsed: base.afternoonSecondsUsed + elapsed })
+        : base;
       if (consumeIfLow) {
-        const rem = remainingSeconds(prev);
+        const rem = remainingSeconds(next);
         if (rem > 0 && rem < 120) {
-          const w = currentWindow();
           next = w === 'morning'
-            ? { ...prev, morningSecondsUsed: prev.morningLimitSeconds + prev.morningBonusSeconds }
-            : { ...prev, afternoonSecondsUsed: prev.afternoonLimitSeconds + prev.afternoonBonusSeconds };
+            ? { ...next, morningSecondsUsed: next.morningLimitSeconds + next.morningBonusSeconds }
+            : { ...next, afternoonSecondsUsed: next.afternoonLimitSeconds + next.afternoonBonusSeconds };
         }
       }
       saveBudget(next);
-      persistAccumRef.current = 0;
       return next;
     });
   }, []);

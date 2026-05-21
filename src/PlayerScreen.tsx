@@ -111,13 +111,21 @@ function TizenPlayer({ videoId, title, knownDuration, budgetCtl }: TizenPlayerPr
     };
   }, [navigate, budgetCtl]);
 
-  // Budget exhausted â€” force home.
+  // Budget exhausted — force home. One-shot timeout (remaining no longer ticks per-second).
   useEffect(() => {
-    if (budgetCtl.remaining <= 0) {
+    const rem = budgetCtl.remaining;
+    if (rem <= 0) {
       budgetCtl.stopTicking();
       navigate('/', { replace: true });
+      return;
     }
-  }, [budgetCtl.remaining, budgetCtl, navigate]);
+    const id = window.setTimeout(() => {
+      budgetCtl.stopTicking();
+      navigate('/', { replace: true });
+    }, rem * 1000);
+    return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once at mount — remaining sampled at video start
 
   const remaining = formatMMSS(budgetCtl.remaining);
   const videoElapsed = formatMMSS(elapsed);
@@ -230,20 +238,24 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, budgetCtl.startTicking, budgetCtl.stopTicking]);
 
-  const { remainingRef } = budgetCtl;
-
   useEffect(() => {
     const start = Date.now();
+    // Capture remaining budget once at mount. With elapsed-based ticking the
+    // React state no longer updates per-second, so we compute wind-down timing
+    // from local elapsed time instead of a live ref.
+    const startRemaining = budgetCtl.remaining;
     const id = window.setInterval(() => {
       const elapsedSec = (Date.now() - start) / 1000;
       if (knownDuration > 0) {
         setMaskEndScreen(Math.max(0, knownDuration - elapsedSec) <= 25);
       }
-      const rem = remainingRef.current;
-      setShowTwoMin(rem >= 110 && rem <= 130);
-      setShowThirtySec(rem >= 25 && rem <= 35);
+      const liveRemaining = Math.max(0, startRemaining - elapsedSec);
+      setShowTwoMin(liveRemaining >= 110 && liveRemaining <= 130);
+      setShowThirtySec(liveRemaining >= 25 && liveRemaining <= 35);
     }, 2000);
     return () => clearInterval(id);
+  // startRemaining is intentionally captured once at mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [knownDuration]);
 
   useEffect(() => {
@@ -325,16 +337,23 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
   const title = searchParams.get('title') ?? '';
   const channelTitle = searchParams.get('channel') ?? '';
 
-  // Budget exhausted — stop playback and return home immediately.
+  // Budget exhausted — stop playback and return home.
+  // One-shot timeout: remaining no longer changes per-second (elapsed-based ticking).
   // This covers both the WebPlayer and TizenPlayer paths in one place.
-  // WebPlayer has no per-second remaining-check of its own; without this
-  // guard it would let the iframe keep playing past zero budget.
   useEffect(() => {
-    if (budgetCtl.remaining <= 0) {
+    const rem = budgetCtl.remaining;
+    if (rem <= 0) {
       budgetCtl.stopTicking();
       navigate('/', { replace: true });
+      return;
     }
-  }, [budgetCtl.remaining, budgetCtl, navigate]);
+    const id = window.setTimeout(() => {
+      budgetCtl.stopTicking();
+      navigate('/', { replace: true });
+    }, rem * 1000);
+    return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once at mount — remaining sampled at video start
 
   // Record to recent history on every play.
   useEffect(() => {
