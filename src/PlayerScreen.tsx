@@ -1,7 +1,6 @@
 ﻿import { memo, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { WindDownBanner } from './components';
-import { formatMMSS } from './format';
+import { formatHMS, formatMMSS } from './format';
 import { incrementVideosWatchedToday, pushRecent } from './storage';
 import type { UseBudget } from './useBudget';
 
@@ -186,9 +185,12 @@ interface WebPlayerProps {
 function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   const navigate = useNavigate();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [showTwoMin, setShowTwoMin] = useState(false);
-  const [showThirtySec, setShowThirtySec] = useState(false);
-  const [maskEndScreen, setMaskEndScreen] = useState(false);
+  // Direct-DOM refs — no React state changes during video playback.
+  // Updating these avoids React re-renders (and the compositor work they trigger
+  // on TV browsers) while still keeping the UI accurate every second.
+  const budgetTimerRef = useRef<HTMLSpanElement>(null);
+  const maskEndRef = useRef<HTMLDivElement>(null);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     budgetCtl.startTicking();
@@ -239,26 +241,6 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   }, [navigate, budgetCtl.startTicking, budgetCtl.stopTicking]);
 
   useEffect(() => {
-    const start = Date.now();
-    // Capture remaining budget once at mount. With elapsed-based ticking the
-    // React state no longer updates per-second, so we compute wind-down timing
-    // from local elapsed time instead of a live ref.
-    const startRemaining = budgetCtl.remaining;
-    const id = window.setInterval(() => {
-      const elapsedSec = (Date.now() - start) / 1000;
-      if (knownDuration > 0) {
-        setMaskEndScreen(Math.max(0, knownDuration - elapsedSec) <= 25);
-      }
-      const liveRemaining = Math.max(0, startRemaining - elapsedSec);
-      setShowTwoMin(liveRemaining >= 110 && liveRemaining <= 130);
-      setShowThirtySec(liveRemaining >= 25 && liveRemaining <= 35);
-    }, 2000);
-    return () => clearInterval(id);
-  // startRemaining is intentionally captured once at mount.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [knownDuration]);
-
-  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Backspace' || e.key === 'Escape') {
         e.preventDefault();
@@ -269,9 +251,49 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
     return () => window.removeEventListener('keydown', handler);
   }, [navigate]);
 
-  const bannerText = showTwoMin
-    ? '2 minutes left — this video will finish'
-    : showThirtySec ? '30 seconds left — this video will finish' : '';
+  // All per-second UI updates go through direct DOM refs — zero React
+  // re-renders (and zero compositor invalidations) during video playback.
+  useEffect(() => {
+    const start = Date.now();
+    const startRemaining = budgetCtl.remaining;
+    const startDuration = knownDuration;
+
+    const tick = () => {
+      const elapsedSec = (Date.now() - start) / 1000;
+      const rem = Math.max(0, startRemaining - elapsedSec);
+
+      // Live budget countdown in the player corner
+      if (budgetTimerRef.current) {
+        budgetTimerRef.current.textContent = `⏱ ${rem >= 3600 ? formatHMS(rem) : formatMMSS(rem)} left`;
+        budgetTimerRef.current.style.color = rem <= 120 ? '#fbbf24' : 'rgba(255,255,255,0.85)';
+      }
+
+      // End-screen gradient mask (hides YouTube's autoplay suggestions)
+      if (maskEndRef.current && startDuration > 0) {
+        maskEndRef.current.style.display =
+          Math.max(0, startDuration - elapsedSec) <= 25 ? 'block' : 'none';
+      }
+
+      // Wind-down banner
+      if (bannerRef.current) {
+        const show2min = rem >= 110 && rem <= 130;
+        const show30sec = rem >= 25 && rem <= 35;
+        if (show2min || show30sec) {
+          bannerRef.current.style.display = 'block';
+          bannerRef.current.textContent = show2min
+            ? '2 minutes left — this video will finish'
+            : '30 seconds left — this video will finish';
+        } else {
+          bannerRef.current.style.display = 'none';
+        }
+      }
+    };
+
+    tick(); // set initial state immediately
+    const id = window.setInterval(tick, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once at mount — all values captured from render-time props
 
   const origin = window.location.origin || 'https://tv-budget.vercel.app';
   const src =
@@ -289,13 +311,18 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
         allowFullScreen
         title="YouTube video"
       />
-      {maskEndScreen && (
-        <div aria-hidden style={{
+      {/* End-screen gradient mask — hidden by default, shown via direct DOM */}
+      <div
+        ref={maskEndRef}
+        aria-hidden
+        style={{
+          display: 'none',
           position: 'absolute', right: 0, bottom: 0, width: '32%', height: '70%',
           background: 'linear-gradient(to top left, rgba(0,0,0,0.85), rgba(0,0,0,0))',
           pointerEvents: 'auto', zIndex: 50,
-        }} onClick={(e) => e.preventDefault()} />
-      )}
+        }}
+        onClick={(e) => e.preventDefault()}
+      />
       {/* Transparent click-shield over YouTube's top bar (title + channel chip)
           so taps there don't open YouTube — without hiding any video pixels. */}
       <div aria-hidden style={{
@@ -313,18 +340,45 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
         background: 'transparent',
         pointerEvents: 'auto', zIndex: 49,
       }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
-      <WindDownBanner show={!!bannerText} text={bannerText} />
+      {/* Budget countdown — corner badge, updated every second via direct DOM */}
+      <span
+        ref={budgetTimerRef}
+        className="tabular"
+        aria-label="Budget remaining"
+        style={{
+          position: 'absolute', top: 16, left: 16,
+          background: 'rgba(0,0,0,0.60)',
+          padding: '6px 16px', borderRadius: 999,
+          fontSize: 20, fontWeight: 700, zIndex: 60,
+          pointerEvents: 'none',
+          color: 'rgba(255,255,255,0.85)',
+        }}
+      />
+      {/* Wind-down banner — shown/hidden via direct DOM, zero React re-renders */}
+      <div
+        ref={bannerRef}
+        role="status"
+        style={{
+          display: 'none',
+          position: 'fixed',
+          top: 0, left: 0, right: 0,
+          background: 'rgba(15,15,15,0.92)',
+          borderLeft: '8px solid var(--warn)',
+          padding: 'var(--space-3) var(--space-6)',
+          fontSize: 28,
+          fontWeight: 600,
+          color: 'var(--text)',
+          zIndex: 200,
+        }}
+      />
     </div>
   );
 }
 
-// Memoized with a custom comparator: only re-render when the video changes.
-// budgetCtl reference changes every second (budget tick) but WebPlayer reads
-// time-sensitive values through budgetCtl.remainingRef (always-current ref)
-// and uses stable startTicking / stopTicking callbacks — no re-render needed.
-const WebPlayer = memo(WebPlayerImpl, (prev, next) =>
-  prev.videoId === next.videoId && prev.knownDuration === next.knownDuration,
-);
+// Memoized: only re-render when the video changes.
+// budgetCtl reference changes on stopTicking/startTicking but WebPlayer reads
+// time-sensitive values through direct DOM refs — no re-render needed.
+const WebPlayer = memo(WebPlayerImpl, (prev, next) => prev.videoId === next.videoId);
 
 // â”€â”€â”€ Route component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

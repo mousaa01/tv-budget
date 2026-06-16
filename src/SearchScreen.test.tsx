@@ -128,23 +128,22 @@ describe('SearchScreen channel mode', () => {
 
     renderChannel();
 
-    // Page 1 settles
+    // Page 1 settles — shows first 10 fits (only 3 exist: a, b, d)
     await waitFor(() => expect(screen.getByText('Video a')).toBeInTheDocument());
     expect(screen.getByText('Video b')).toBeInTheDocument();
     expect(screen.getByText('Video d')).toBeInTheDocument();
     expect(screen.queryByText('Video c')).not.toBeInTheDocument(); // too short — fully filtered
 
-    // Click load-more for page 2
+    // Click load-more ONCE. The new loadMore fetches pages until it
+    // accumulates 10 new fits — page2 yields 2 (e, g), page3 yields 2 (h, i),
+    // total 4 < 10 but no more pages, so all are flushed in one click.
     await act(async () => { fireEvent.click(screen.getByText('Load more videos')); });
     await waitFor(() => expect(screen.getByText('Video e')).toBeInTheDocument());
     expect(screen.getByText('Video g')).toBeInTheDocument();
+    expect(screen.getByText('Video h')).toBeInTheDocument();
+    expect(screen.getByText('Video i')).toBeInTheDocument();
     // Video f (4000s) is too long — in channel mode too-long cards are hidden entirely.
     expect(screen.queryByText('Video f')).not.toBeInTheDocument();
-
-    // Click load-more for page 3
-    await act(async () => { fireEvent.click(screen.getByText('Load more videos')); });
-    await waitFor(() => expect(screen.getByText('Video h')).toBeInTheDocument());
-    expect(screen.getByText('Video i')).toBeInTheDocument();
 
     // No more pages — Load more button hidden
     expect(screen.queryByText('Load more videos')).not.toBeInTheDocument();

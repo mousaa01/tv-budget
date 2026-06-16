@@ -26,6 +26,10 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
   const [fits, setFits] = useState<VideoResult[]>([]);
   const [tooLong, setTooLong] = useState<VideoResult[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
+  // How many fitting videos to show at once. Starts at 10; incremented by 10
+  // each time "Load more" is pressed. Keeps the initial view clean and avoids
+  // showing 30+ cards when most of the budget is available.
+  const [displayCount, setDisplayCount] = useState(10);
   const [subscribedSet, setSubscribedSet] = useState<Set<string>>(new Set());
   // Auto-pagination: when channel feeds return 0 eligible videos (e.g. the
   // most recent uploads are all Shorts, or all longer than the remaining
@@ -41,6 +45,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     setFits([]);
     setTooLong([]);
     setNextPageToken(undefined);
+    setDisplayCount(10);
     autoPagesRef.current = 0;
     const settings = loadSettings();
     const subscribed = loadSubscribedChannels();
@@ -91,14 +96,31 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
     }
     setLoadingMore(true);
     const settings = loadSettings();
-    fetchChannelFeed(channelId, nextPageToken)
-      .then((page) => {
+    // For manual "load more": keep fetching pages until we accumulate at least
+    // 10 new fitting videos (up to 5 API calls). This prevents the "shows only
+    // 1 video" problem when the next API page has 50 videos but few fit the budget.
+    // Auto-pagination fetches one page at a time and chains via the useEffect.
+    const maxPages = auto ? 1 : 5;
+    const doFetch = (
+      token: string,
+      accFits: VideoResult[],
+      accTooLong: VideoResult[],
+      pagesLeft: number,
+    ): Promise<void> =>
+      fetchChannelFeed(channelId, token).then((page) => {
         const filtered = applyBlocklist(page.videos, settings.blocklistKeywords);
         const split = partitionByDuration(filtered, budgetCtl.remaining);
-        setFits((prev) => [...prev, ...split.fits]);
-        setTooLong((prev) => [...prev, ...split.tooLong]);
+        const nextFits = [...accFits, ...split.fits];
+        const nextTooLong = [...accTooLong, ...split.tooLong];
         setNextPageToken(page.nextPageToken);
-      })
+        // Manual mode: keep fetching until we have 10 new fits or run out of pages/tries
+        if (!auto && nextFits.length < 10 && page.nextPageToken && pagesLeft > 1) {
+          return doFetch(page.nextPageToken, nextFits, nextTooLong, pagesLeft - 1);
+        }
+        setFits((prev) => [...prev, ...nextFits]);
+        setTooLong((prev) => [...prev, ...nextTooLong]);
+      });
+    doFetch(nextPageToken, [], [], maxPages)
       .catch((e: unknown) => {
         // Surface the failure so the user knows pagination stopped and why.
         setError(e instanceof Error ? e.message : 'Loading more videos failed');
@@ -210,6 +232,7 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
           }
         >
           {fits
+            .slice(0, displayCount)
             .filter((v) => v.durationSeconds <= budgetCtl.remaining)
             .map((v) => (
             <VideoCard
@@ -245,9 +268,14 @@ export function SearchScreen({ budgetCtl }: SearchProps) {
               onSelect={() => { /* disabled */ }}
             />
           ))}
-          {isChannelMode && nextPageToken && !loading && (
+          {isChannelMode && (nextPageToken || fits.length > displayCount) && !loading && (
             <div style={{ gridColumn: '1 / -1', padding: 'var(--space-3) 0', display: 'flex', justifyContent: 'center' }}>
-              <Button variant="secondary" onClick={() => loadMore(false)}>
+              <Button variant="secondary" onClick={() => {
+                const next = displayCount + 10;
+                setDisplayCount(next);
+                // Fetch more from API only when the in-memory list is exhausted
+                if (fits.length < next && nextPageToken) loadMore(false);
+              }}>
                 {loadingMore ? 'Loading…' : 'Load more videos'}
               </Button>
             </div>

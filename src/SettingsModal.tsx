@@ -5,7 +5,7 @@ import { buildAuthUrl, fetchSubscribedChannels, fetchUserProfile, isTokenValid }
 import { clearSubscribedChannels, currentWindow, loadHistory, loadSettings, loadSubscribedChannels, saveSettings, saveSubscribedChannels } from './storage';
 import type { Settings, SubscribedChannel, SubscribedChannelsMeta } from './types';
 import { lookupChannel } from './youtube';
-import { saveSettingsToDrive } from './drive';
+import { saveSettingsToDrive, loadSettingsFromDrive } from './drive';
 import type { UseBudget } from './useBudget';
 
 interface SettingsModalProps {
@@ -28,6 +28,8 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
   const [subscriptions, setSubscriptions] = useState<SubscribedChannelsMeta | null>(() => loadSubscribedChannels());
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [drivePulling, setDrivePulling] = useState(false);
+  const [driveStatus, setDriveStatus] = useState<string | null>(null);
 
   const handleRefreshSubscriptions = async () => {
     const meta = loadSubscribedChannels();
@@ -72,6 +74,7 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
       setSettings(loadSettings());
       setBlocklistInput('');
       setSubscriptions(loadSubscribedChannels());
+      setDriveStatus(null);
     }
   }, [open]);
 
@@ -98,6 +101,32 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
     if (token) void saveSettingsToDrive(token, cleaned);
     setSavedToast(true);
     window.setTimeout(() => setSavedToast(false), 1500);
+  };
+
+  const pullFromDrive = async () => {
+    const meta = loadSubscribedChannels();
+    if (!meta?.accessToken) {
+      setDriveStatus('Not signed in — connect your YouTube account first.');
+      return;
+    }
+    setDrivePulling(true);
+    setDriveStatus(null);
+    try {
+      const driveSettings = await loadSettingsFromDrive(meta.accessToken);
+      if (!driveSettings || Object.keys(driveSettings).length === 0) {
+        setDriveStatus('Nothing found in Drive yet. Open Settings on your other device and press “Save” to upload.');
+        return;
+      }
+      const merged = { ...loadSettings(), ...driveSettings } as Parameters<typeof saveSettings>[0];
+      saveSettings(merged);
+      budgetCtl.refresh();
+      setSettings(merged);
+      setDriveStatus(`✓ Pulled settings from Drive (${Object.keys(driveSettings).length} fields updated).`);
+    } catch (e) {
+      setDriveStatus(`Drive sync failed: ${e instanceof Error ? e.message : String(e)}. Try signing out and back in to re-grant Drive access.`);
+    } finally {
+      setDrivePulling(false);
+    }
   };
 
   const addBonus = (m: number) => {
@@ -383,6 +412,27 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
                     ⚠ {syncError}
                   </div>
                 )}
+                {/* Cross-device settings sync from Google Drive */}
+                <div style={{ marginTop: 'var(--space-3)', paddingTop: 'var(--space-2)', borderTop: '1px solid var(--border)' }}>
+                  <h4 className="t-h2" style={{ marginBottom: 'var(--space-1)' }}>☁️ Drive settings sync</h4>
+                  <div className="t-meta" style={{ marginBottom: 'var(--space-2)', color: 'var(--text-dim)' }}>
+                    Pull the settings you saved on another device (e.g. your laptop) — including pinned channels, time limits and PIN.
+                  </div>
+                  <Button variant="secondary" onClick={() => void pullFromDrive()} disabled={drivePulling}>
+                    {drivePulling ? 'Pulling…' : '↓ Pull settings from Drive'}
+                  </Button>
+                  {driveStatus && (
+                    <div className="t-meta" style={{
+                      marginTop: 'var(--space-1)',
+                      color: driveStatus.startsWith('✓') ? 'var(--ok)' : 'var(--danger)',
+                    }}>
+                      {driveStatus}
+                    </div>
+                  )}
+                  <div className="t-meta" style={{ marginTop: 6, color: 'var(--text-dim)' }}>
+                    Tip: if nothing is found, open Settings on your other device, make a change, and press “Save”. If sync keeps failing, sign out and back in to re-grant Drive access.
+                  </div>
+                </div>
               </>
             ) : (
               <>

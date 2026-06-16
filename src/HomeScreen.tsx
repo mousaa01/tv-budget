@@ -45,7 +45,7 @@ function SearchPlaceholder({ query, onPress }: { query: string; onPress: () => v
   );
 }
 
-function ChannelButton({ channel, onPress }: { channel: SubscribedChannel; onPress: () => void }) {
+function ChannelButton({ channel, isPinned, onPress }: { channel: SubscribedChannel; isPinned?: boolean; onPress: () => void }) {
   const { ref, focused } = useFocusable({ onEnterPress: onPress });
   return (
     <button
@@ -55,6 +55,7 @@ function ChannelButton({ channel, onPress }: { channel: SubscribedChannel; onPre
       onClick={onPress}
       title={channel.title}
       style={{
+        position: 'relative',
         width: 200,
         display: 'flex',
         flexDirection: 'column',
@@ -62,11 +63,17 @@ function ChannelButton({ channel, onPress }: { channel: SubscribedChannel; onPre
         gap: 8,
         padding: 12,
         background: 'var(--surface)',
-        border: '2px solid var(--border)',
+        border: isPinned ? '2px solid var(--accent)' : '2px solid var(--border)',
         borderRadius: 'var(--radius-md)',
         cursor: 'pointer',
       }}
     >
+      {isPinned && (
+        <div style={{
+          position: 'absolute', top: 6, right: 8,
+          fontSize: 14, lineHeight: 1, userSelect: 'none',
+        }}>📌</div>
+      )}
       <img
         src={channel.thumbnail}
         alt=""
@@ -141,6 +148,7 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [channels, setChannels] = useState<SubscribedChannel[]>([]);
+  const [pinnedChannelIds, setPinnedChannelIds] = useState<Set<string>>(new Set());
   const [recent, setRecent] = useState<RecentVideo[]>([]);
   const recentScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -148,8 +156,11 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
   useEffect(() => {
     const meta = loadSubscribedChannels();
     const pinned = loadSettings().pinnedChannels ?? [];
-    const syncedIds = new Set((meta?.channels ?? []).map((c) => c.id));
-    setChannels([...(meta?.channels ?? []), ...pinned.filter((p) => !syncedIds.has(p.id))]);
+    const pinnedIds = new Set(pinned.map((p) => p.id));
+    // Pinned channels always appear first so they can't be scrolled past.
+    // Subscribed channels that are also pinned are deduplicated (pinned wins).
+    setChannels([...pinned, ...(meta?.channels ?? []).filter((c) => !pinnedIds.has(c.id))]);
+    setPinnedChannelIds(pinnedIds);
     setRecent(loadRecent());
   }, []);
 
@@ -176,8 +187,9 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
       };
       saveSubscribedChannels(updated);
       const pinned = loadSettings().pinnedChannels ?? [];
-      const syncedIds = new Set(fresh.map((c) => c.id));
-      setChannels([...fresh, ...pinned.filter((p) => !syncedIds.has(p.id))]);
+      const pinnedIds = new Set(pinned.map((p) => p.id));
+      setChannels([...pinned, ...fresh.filter((c) => !pinnedIds.has(c.id))]);
+      setPinnedChannelIds(pinnedIds);
     } catch (e) {
       setRefreshError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -316,6 +328,7 @@ export function HomeScreen({ budgetCtl }: HomeProps) {
               <ChannelButton
                 key={c.id}
                 channel={c}
+                isPinned={pinnedChannelIds.has(c.id)}
                 onPress={() => navigate(`/search?channelId=${encodeURIComponent(c.id)}&title=${encodeURIComponent(c.title)}`)}
               />
             ))}
