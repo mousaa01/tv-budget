@@ -252,11 +252,17 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   }, [navigate]);
 
   // All per-second UI updates go through direct DOM refs — zero React
-  // re-renders (and zero compositor invalidations) during video playback.
+  // re-renders during video playback.
+  // DOM mutations are deferred to the next requestAnimationFrame so they land
+  // at vsync rather than mid-frame. This prevents the compositor from stalling
+  // while it re-evaluates overlay layers during a video frame decode, which was
+  // the root cause of visual jumps/cuts (audio was unaffected because it decodes
+  // on a separate thread).
   useEffect(() => {
     const start = Date.now();
     const startRemaining = budgetCtl.remaining;
     const startDuration = knownDuration;
+    let rafId: number | null = null;
 
     const tick = () => {
       const elapsedSec = (Date.now() - start) / 1000;
@@ -289,9 +295,18 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
       }
     };
 
-    tick(); // set initial state immediately
-    const id = window.setInterval(tick, 1000);
-    return () => clearInterval(id);
+    // Schedule DOM mutations at the next animation frame so they are
+    // committed at vsync, preventing mid-frame compositor invalidation.
+    const scheduledTick = () => {
+      rafId = requestAnimationFrame(() => tick());
+    };
+
+    scheduledTick(); // set initial state immediately
+    const id = window.setInterval(scheduledTick, 1000);
+    return () => {
+      clearInterval(id);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once at mount — all values captured from render-time props
 
@@ -306,7 +321,13 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
       <iframe
         ref={iframeRef}
         src={src}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none',
+          // Keep the video on its own GPU compositing layer so that style
+          // mutations on the overlay elements (timer, banner) do not
+          // invalidate the video layer and cause dropped frames.
+          willChange: 'transform',
+        }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
         title="YouTube video"
