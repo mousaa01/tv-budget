@@ -34,7 +34,9 @@ export function loadSettings(): Settings {
 }
 
 export function saveSettings(s: Settings): void {
-  localStorage.setItem(KEYS.settings, JSON.stringify(s));
+  try {
+    localStorage.setItem(KEYS.settings, JSON.stringify(s));
+  } catch { /* QuotaExceededError or similar — best-effort */ }
 }
 
 export function loadSubscribedChannels(): SubscribedChannelsMeta | null {
@@ -52,11 +54,15 @@ export function loadSubscribedChannels(): SubscribedChannelsMeta | null {
 }
 
 export function saveSubscribedChannels(meta: SubscribedChannelsMeta): void {
-  localStorage.setItem(KEYS.subscriptions, JSON.stringify(meta));
+  try {
+    localStorage.setItem(KEYS.subscriptions, JSON.stringify(meta));
+  } catch { /* QuotaExceededError or similar — best-effort */ }
 }
 
 export function clearSubscribedChannels(): void {
-  localStorage.removeItem(KEYS.subscriptions);
+  try {
+    localStorage.removeItem(KEYS.subscriptions);
+  } catch { /* best-effort */ }
 }
 
 // Which time window is currently active.
@@ -98,7 +104,9 @@ export function loadBudget(): BudgetState {
 }
 
 export function saveBudget(b: BudgetState): void {
-  localStorage.setItem(KEYS.budget, JSON.stringify(b));
+  try {
+    localStorage.setItem(KEYS.budget, JSON.stringify(b));
+  } catch { /* QuotaExceededError or similar — best-effort */ }
 }
 
 export function remainingSeconds(b: BudgetState): number {
@@ -119,11 +127,15 @@ export function loadRecent(): RecentVideo[] {
 export function pushRecent(v: RecentVideo): void {
   const list = loadRecent().filter((r) => r.id !== v.id);
   list.unshift(v);
-  localStorage.setItem(KEYS.recent, JSON.stringify(list.slice(0, 10)));
+  try {
+    localStorage.setItem(KEYS.recent, JSON.stringify(list.slice(0, 10)));
+  } catch { /* QuotaExceededError or similar — best-effort */ }
 }
 
 export function clearRecent(): void {
-  localStorage.removeItem(KEYS.recent);
+  try {
+    localStorage.removeItem(KEYS.recent);
+  } catch { /* best-effort */ }
 }
 
 export function loadHistory(): DailySummary[] {
@@ -142,7 +154,9 @@ function archiveDay(b: BudgetState): void {
     secondsUsed: b.morningSecondsUsed + b.afternoonSecondsUsed,
     videosWatched: 0,
   });
-  localStorage.setItem(KEYS.history, JSON.stringify(history.slice(0, 30)));
+  try {
+    localStorage.setItem(KEYS.history, JSON.stringify(history.slice(0, 30)));
+  } catch { /* QuotaExceededError or similar — best-effort */ }
 }
 
 export function incrementVideosWatchedToday(): void {
@@ -154,5 +168,7 @@ export function incrementVideosWatchedToday(): void {
   } else {
     history.unshift({ date: today, secondsUsed: 0, videosWatched: 1 });
   }
-  localStorage.setItem(KEYS.history, JSON.stringify(history.slice(0, 30)));
+  try {
+    localStorage.setItem(KEYS.history, JSON.stringify(history.slice(0, 30)));
+  } catch { /* QuotaExceededError or similar — best-effort */ }
 }
