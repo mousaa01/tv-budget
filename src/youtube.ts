@@ -237,7 +237,7 @@ async function hydrateDurations(
 }
 
 export function applyBlocklist(results: VideoResult[], keywords: string[]): VideoResult[] {
-  if (keywords.length === 0) return results;
+  if (!keywords || keywords.length === 0) return results;
   const lowered = keywords.map((k) => k.toLowerCase()).filter(Boolean);
   return results.filter((r) => {
     const hay = r.title.toLowerCase();
