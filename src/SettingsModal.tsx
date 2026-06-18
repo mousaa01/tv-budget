@@ -274,6 +274,8 @@ export function SettingsModal({ open, onClose, budgetCtl }: SettingsModalProps) 
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)', flexWrap: 'wrap' }}>
               <Button variant="secondary" onClick={() => addBonus(-5)}>−5 min</Button>
+              <Button variant="secondary" onClick={() => addBonus(-1)}>−1 min</Button>
+              <Button variant="secondary" onClick={() => addBonus(1)}>+1 min</Button>
               <Button variant="secondary" onClick={() => addBonus(5)}>+5 min</Button>
             </div>
           </section>

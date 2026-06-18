@@ -32,6 +32,7 @@ import { HomeScreen } from './HomeScreen';
 import { TimesUpScreen } from './TimesUpScreen';
 import { PlayerScreen } from './PlayerScreen';
 import { SearchScreen } from './SearchScreen';
+import { SettingsModal } from './SettingsModal';
 import { FiveMinuteWarning, VideoCard } from './components';
 import {
   loadRecent,
@@ -708,6 +709,38 @@ describe('UC12: As a parent, I want to grant bonus minutes via a PIN-protected s
     fireEvent.click(screen.getByRole('button', { name: /\+30 min/i }));
     expect(budget.addBonusSeconds).toHaveBeenCalledWith(30 * 60);
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+  });
+
+  function renderAuthenticatedSettings(): { budget: ReturnType<typeof makeBudget> } {
+    saveSettings({ ...DEFAULT_SETTINGS, pin: '1234' });
+    const budget = makeBudget();
+    const { rerender } = render(
+      <SettingsModal open={false} onClose={vi.fn()} budgetCtl={budget} />,
+    );
+    rerender(<SettingsModal open={true} onClose={vi.fn()} budgetCtl={budget} />);
+    fireEvent.change(screen.getByLabelText(/^pin$/i), { target: { value: '1234' } });
+    fireEvent.click(screen.getByRole('button', { name: /^unlock$/i }));
+    return { budget };
+  }
+
+  it('SettingsModal shows ±1 min and ±5 min adjustment buttons when authenticated', () => {
+    renderAuthenticatedSettings();
+    expect(screen.getByRole('button', { name: /^−1 min$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^\+1 min$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^−5 min$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^\+5 min$/i })).toBeInTheDocument();
+  });
+
+  it('−1 min button calls addBonusSeconds with −60', () => {
+    const { budget } = renderAuthenticatedSettings();
+    fireEvent.click(screen.getByRole('button', { name: /^−1 min$/i }));
+    expect(budget.addBonusSeconds).toHaveBeenCalledWith(-60);
+  });
+
+  it('+1 min button calls addBonusSeconds with 60', () => {
+    const { budget } = renderAuthenticatedSettings();
+    fireEvent.click(screen.getByRole('button', { name: /^\+1 min$/i }));
+    expect(budget.addBonusSeconds).toHaveBeenCalledWith(60);
   });
 });
 
