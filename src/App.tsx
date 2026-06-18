@@ -108,16 +108,21 @@ export default function App() {
           TimerOverlay is now memoized and cheap, and the user wants the budget
           visible on every screen, so we keep it everywhere. */}
       {!onPlayer && <BackgroundIllustrations />}
-      {/* Timer overlay and 5-min warning are suppressed on the player route.
-          The WebPlayer renders its own live budget countdown via direct DOM refs
-          (no React re-renders), keeping the compositor idle during video playback. */}
+      {/* TimerOverlay is suppressed on the player route — the WebPlayer renders
+          its own live budget countdown via direct DOM refs (no React re-renders),
+          keeping the compositor idle during video playback. */}
       {!onPlayer && (
         <TimerOverlay
           remainingSeconds={budgetCtl.remaining}
           usedSeconds={budgetCtl.budget.morningSecondsUsed + budgetCtl.budget.afternoonSecondsUsed}
         />
       )}
-      {!onPlayer && <FiveMinuteWarning trigger={budgetCtl.fiveMinuteWarning} />}
+      {/* FiveMinuteWarning is rendered on ALL routes including the player so
+          the audio + visual alert fires the moment 5 minutes remain, even
+          mid-video, rather than being deferred until the user returns to the
+          home screen (the previous bug). It only re-renders when the trigger
+          increments (at most once per session), so it has no per-frame cost. */}
+      <FiveMinuteWarning trigger={budgetCtl.fiveMinuteWarning} />
       {!onPlayer && (
         <AccountBadge
           name={auth.profile?.name ?? 'Signed in'}
