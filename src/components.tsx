@@ -523,7 +523,13 @@ interface ScrollNavProps {
   bottomOffset?: number | string;
 }
 
-export function ScrollNav({ targetRef, step, bottomOffset = 'var(--space-4)' }: ScrollNavProps) {
+// Default offset clears the floating ⚙ Settings button (80px tall, anchored at
+// bottom: var(--space-4)) so the ▼ scroll-down arrow is never hidden underneath it.
+export function ScrollNav({
+  targetRef,
+  step,
+  bottomOffset = 'calc(var(--space-4) + 80px + var(--space-2))',
+}: ScrollNavProps) {
   const scrollBy = (dir: 1 | -1) => {
     const el = targetRef.current;
     if (!el) return;
