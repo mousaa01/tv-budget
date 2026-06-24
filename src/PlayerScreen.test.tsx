@@ -339,3 +339,201 @@ describe('PlayerScreen (Tizen/native-app branch)', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 });
+
+// ── Visual timer display respects play/pause/buffering state ────────────────
+// These tests verify the *displayed* countdown in the overlay (budgetTimerRef)
+// only advances during actual playback — not while paused or buffering.
+// Fake timers let us advance setInterval and Date.now() deterministically.
+
+describe('WebPlayer visual timer respects play/pause/buffering state', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    delete (window as unknown as { tizen?: unknown }).tizen;
+    vi.useFakeTimers();
+    // Run requestAnimationFrame callbacks synchronously so tick() fires
+    // immediately when scheduledTick() is called inside the interval.
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('visual timer shows initial remaining time and does not count down before YT_PLAYING fires', () => {
+    // 3000 s = 50:00 — choose a sub-3600 value so formatMMSS is used throughout.
+    const budget = makeBudget({ remaining: 3000 });
+    renderPlayer('timerInit', budget);
+    const timerSpan = screen.getByLabelText('Budget remaining');
+
+    // Initial tick fires on mount — should show full budget, no elapsed time.
+    expect(timerSpan.textContent).toBe('⏱ 50:00 left');
+
+    // Advance 5 seconds without any YT_PLAYING — timer must NOT change.
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(timerSpan.textContent).toBe('⏱ 50:00 left');
+  });
+
+  it('visual timer counts down only while YT_PLAYING is active', () => {
+    const budget = makeBudget({ remaining: 3000 });
+    renderPlayer('timerPlay', budget);
+    const timerSpan = screen.getByLabelText('Budget remaining');
+
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: { playerState: 1 } }), // YT_PLAYING
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+
+    // 5 seconds of playback — 3000 − 5 = 2995 → "49:55"
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(timerSpan.textContent).toBe('⏱ 49:55 left');
+  });
+
+  it('visual timer freezes when YT_PAUSED fires — display does not change while paused', () => {
+    const budget = makeBudget({ remaining: 3000 });
+    renderPlayer('timerPause', budget);
+    const timerSpan = screen.getByLabelText('Budget remaining');
+
+    // Play for 5 seconds.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: { playerState: 1 } }),
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+    act(() => { vi.advanceTimersByTime(5000); });
+    const textAfterPlaying = timerSpan.textContent; // "⏱ 49:55 left"
+
+    // User pauses.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: { playerState: 2 } }), // YT_PAUSED
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+
+    // Advance 5 more wall-clock seconds while paused — display must NOT change.
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(timerSpan.textContent).toBe(textAfterPlaying);
+  });
+
+  it('visual timer freezes when YT_BUFFERING fires — display does not change while buffering', () => {
+    const budget = makeBudget({ remaining: 3000 });
+    renderPlayer('timerBuf', budget);
+    const timerSpan = screen.getByLabelText('Budget remaining');
+
+    // Play for 5 seconds.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: { playerState: 1 } }),
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+    act(() => { vi.advanceTimersByTime(5000); });
+    const textAfterPlaying = timerSpan.textContent;
+
+    // Buffering kicks in.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: { playerState: 3 } }), // YT_BUFFERING
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+
+    // Advance 5 more wall-clock seconds while buffering — display must NOT change.
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(timerSpan.textContent).toBe(textAfterPlaying);
+  });
+
+  it('visual timer resumes from frozen value when YT_PLAYING fires again — only playing time is counted', () => {
+    const budget = makeBudget({ remaining: 3000 });
+    renderPlayer('timerResume', budget);
+    const timerSpan = screen.getByLabelText('Budget remaining');
+
+    // Play 5 seconds → 3000 − 5 = 2995
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: { playerState: 1 } }),
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    // Pause 5 seconds (paused time must NOT be charged)
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: { playerState: 2 } }),
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    // Resume and play 5 more seconds → 3000 − 10 = 2990 → "49:50"
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: { playerState: 1 } }),
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    // Total playing time = 10 s; 5 s of pause is NOT charged.
+    // 3000 − 10 = 2990 → "49:50"
+    expect(timerSpan.textContent).toBe('⏱ 49:50 left');
+  });
+});
+
+// ── Exception handling ──────────────────────────────────────────────────────
+
+describe('WebPlayer exception handling', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    delete (window as unknown as { tizen?: unknown }).tizen;
+  });
+
+  it('ignores malformed (non-JSON) postMessage data without throwing', () => {
+    renderPlayer('excTest1');
+    expect(() => {
+      act(() => {
+        window.dispatchEvent(new MessageEvent('message', {
+          data: 'not-valid-json{{{',
+          origin: 'https://www.youtube-nocookie.com',
+        }));
+      });
+    }).not.toThrow();
+  });
+
+  it('ignores postMessage with null data without throwing', () => {
+    renderPlayer('excTest2');
+    expect(() => {
+      act(() => {
+        window.dispatchEvent(new MessageEvent('message', {
+          data: null,
+          origin: 'https://www.youtube-nocookie.com',
+        }));
+      });
+    }).not.toThrow();
+  });
+
+  it('ignores postMessage with missing playerState without calling startTicking or stopTicking', () => {
+    const budget = makeBudget();
+    renderPlayer('excTest3', budget);
+    vi.mocked(budget.startTicking).mockClear();
+    vi.mocked(budget.stopTicking).mockClear();
+
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({ info: {} }), // playerState field absent
+        origin: 'https://www.youtube-nocookie.com',
+      }));
+    });
+
+    expect(budget.startTicking).not.toHaveBeenCalled();
+    expect(budget.stopTicking).not.toHaveBeenCalled();
+  });
+});

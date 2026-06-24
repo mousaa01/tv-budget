@@ -192,6 +192,9 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   const budgetTimerRef = useRef<HTMLSpanElement>(null);
   const maskEndRef = useRef<HTMLDivElement>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
+  // Tracks whether the YouTube player is currently playing so the visual timer
+  // loop only counts down during actual playback (not while paused or buffering).
+  const isPlayingRef = useRef(false);
 
   useEffect(() => {
     // Do NOT start ticking on mount — budget only drains during actual playback.
@@ -226,10 +229,17 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         const state: number | undefined = data?.info?.playerState ?? data?.playerState;
-        if (state === YT_PLAYING) budgetCtl.startTicking();
-        else if (state === YT_PAUSED) budgetCtl.stopTicking(); // mid-video — do NOT consume sub-2-min remainder
-        else if (state === YT_BUFFERING) budgetCtl.stopTicking(); // buffering — pause timer, do NOT consume sub-2-min remainder
-        else if (state === YT_ENDED) {
+        if (state === YT_PLAYING) {
+          isPlayingRef.current = true;
+          budgetCtl.startTicking();
+        } else if (state === YT_PAUSED) {
+          isPlayingRef.current = false;
+          budgetCtl.stopTicking(); // mid-video — do NOT consume sub-2-min remainder
+        } else if (state === YT_BUFFERING) {
+          isPlayingRef.current = false;
+          budgetCtl.stopTicking(); // buffering — pause timer, do NOT consume sub-2-min remainder
+        } else if (state === YT_ENDED) {
+          isPlayingRef.current = false;
           // Video completed naturally. Consume any sub-2-min budget leftover
           // before navigating so the child isn't stranded with unusable seconds.
           budgetCtl.stopTicking(true);
@@ -263,40 +273,52 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   // the root cause of visual jumps/cuts (audio was unaffected because it decodes
   // on a separate thread).
   useEffect(() => {
-    const start = Date.now();
     const startRemaining = budgetCtl.remaining;
     const startDuration = knownDuration;
+    // Accumulated milliseconds of actual playback (excludes paused/buffering time).
+    let accumulatedMs = 0;
+    // Wall-clock time of the last tick — used to compute the delta on each tick.
+    let lastCheckTime = Date.now();
     let rafId: number | null = null;
 
     const tick = () => {
-      const elapsedSec = (Date.now() - start) / 1000;
-      const rem = Math.max(0, startRemaining - elapsedSec);
-
-      // Live budget countdown in the player corner
-      if (budgetTimerRef.current) {
-        budgetTimerRef.current.textContent = `⏱ ${rem >= 3600 ? formatHMS(rem) : formatMMSS(rem)} left`;
-        budgetTimerRef.current.style.color = rem <= 120 ? '#fbbf24' : 'rgba(255,255,255,0.85)';
-      }
-
-      // End-screen gradient mask (hides YouTube's autoplay suggestions)
-      if (maskEndRef.current && startDuration > 0) {
-        maskEndRef.current.style.display =
-          Math.max(0, startDuration - elapsedSec) <= 25 ? 'block' : 'none';
-      }
-
-      // Wind-down banner
-      if (bannerRef.current) {
-        const show2min = rem >= 110 && rem <= 130;
-        const show30sec = rem >= 25 && rem <= 35;
-        if (show2min || show30sec) {
-          bannerRef.current.style.display = 'block';
-          bannerRef.current.textContent = show2min
-            ? '2 minutes left — this video will finish'
-            : '30 seconds left — this video will finish';
-        } else {
-          bannerRef.current.style.display = 'none';
+      try {
+        const now = Date.now();
+        // Advance the counter only while the video is actually playing.
+        if (isPlayingRef.current) {
+          accumulatedMs += now - lastCheckTime;
         }
-      }
+        lastCheckTime = now;
+
+        const elapsedSec = accumulatedMs / 1000;
+        const rem = Math.max(0, startRemaining - elapsedSec);
+
+        // Live budget countdown in the player corner
+        if (budgetTimerRef.current) {
+          budgetTimerRef.current.textContent = `⏱ ${rem >= 3600 ? formatHMS(rem) : formatMMSS(rem)} left`;
+          budgetTimerRef.current.style.color = rem <= 120 ? '#fbbf24' : 'rgba(255,255,255,0.85)';
+        }
+
+        // End-screen gradient mask (hides YouTube's autoplay suggestions)
+        if (maskEndRef.current && startDuration > 0) {
+          maskEndRef.current.style.display =
+            Math.max(0, startDuration - elapsedSec) <= 25 ? 'block' : 'none';
+        }
+
+        // Wind-down banner
+        if (bannerRef.current) {
+          const show2min = rem >= 110 && rem <= 130;
+          const show30sec = rem >= 25 && rem <= 35;
+          if (show2min || show30sec) {
+            bannerRef.current.style.display = 'block';
+            bannerRef.current.textContent = show2min
+              ? '2 minutes left — this video will finish'
+              : '30 seconds left — this video will finish';
+          } else {
+            bannerRef.current.style.display = 'none';
+          }
+        }
+      } catch { /* ignore — DOM refs may be null during unmount */ }
     };
 
     // Schedule DOM mutations at the next animation frame so they are
@@ -312,7 +334,7 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once at mount — all values captured from render-time props
+  }, []); // isPlayingRef is a stable ref — no need in deps; all values captured at mount
 
   const origin = window.location.origin || 'https://tv-budget.vercel.app';
   const src =
