@@ -101,9 +101,25 @@ describe('PlayerScreen (web/iframe branch)', () => {
     expect(iframe.getAttribute('allow')).toContain('autoplay');
   });
 
-  it('calls startTicking on mount', () => {
+  it('does NOT call startTicking on mount — budget only starts when YT_PLAYING fires', () => {
+    // UC21: timer must not run during initial buffering. startTicking() is no longer
+    // called on mount; it is only called when the YouTube player fires state=1 (PLAYING).
     const budget = makeBudget();
     renderPlayer('vid1', budget);
+    expect(budget.startTicking).not.toHaveBeenCalled();
+  });
+
+  it('calls startTicking when YouTube postMessage signals PLAYING (state=1) — first play after buffering', () => {
+    const budget = makeBudget();
+    renderPlayer('vid1play', budget);
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 1 } }), // YT_PLAYING
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
     expect(budget.startTicking).toHaveBeenCalledTimes(1);
   });
 
@@ -215,6 +231,28 @@ describe('PlayerScreen (web/iframe branch)', () => {
       );
     });
     expect(budget.stopTicking).toHaveBeenCalled();
+  });
+
+  it('YT_BUFFERING (state=3) calls stopTicking without consumeIfLow — timer must not run while buffering (UC21)', () => {
+    // UC21: when the YouTube player fires state=3 (buffering), the budget timer
+    // must pause so the child is not charged for time spent waiting for the
+    // video to load. The timer resumes when state=1 (playing) fires.
+    const budget = makeBudget();
+    renderPlayer('vidBuffer', budget);
+    vi.mocked(budget.stopTicking).mockClear();
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 3 } }), // YT_BUFFERING
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+
+    expect(budget.stopTicking).toHaveBeenCalledTimes(1);
+    // Must NOT pass true — buffering is not the end of the session.
+    expect(budget.stopTicking).toHaveBeenCalledWith(); // called with zero args
   });
 
   it('navigates home immediately when budget is already exhausted (remaining = 0)', () => {
