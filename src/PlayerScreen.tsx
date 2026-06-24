@@ -257,16 +257,23 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
 
   // All per-second UI updates go through direct DOM refs — zero React
   // re-renders during video playback.
-  // DOM mutations are deferred to the next requestAnimationFrame so they land
-  // at vsync rather than mid-frame. This prevents the compositor from stalling
-  // while it re-evaluates overlay layers during a video frame decode, which was
-  // the root cause of visual jumps/cuts (audio was unaffected because it decodes
-  // on a separate thread).
+  // DOM mutations are applied directly in the setInterval callback (no
+  // requestAnimationFrame wrapper). With all overlay elements isolated in their
+  // own GPU compositing layer (via willChange: transform + contain: strict on
+  // the overlay container below), these mutations only update that layer's GPU
+  // texture and cannot stall the video compositor. Wrapping in RAF would
+  // schedule our JavaScript AT the vsync boundary — the exact moment the
+  // hardware video decoder is under peak load for high-motion content — so we
+  // intentionally run between frames instead.
   useEffect(() => {
     const start = Date.now();
     const startRemaining = budgetCtl.remaining;
     const startDuration = knownDuration;
-    let rafId: number | null = null;
+    // These variables persist across tick() invocations intentionally — they
+    // cache the last value written to the DOM so we only update when the state
+    // actually changes, avoiding redundant GPU texture uploads every second.
+    let maskVisible = false;
+    let bannerText = '';
 
     const tick = () => {
       const elapsedSec = (Date.now() - start) / 1000;
@@ -278,39 +285,36 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
         budgetTimerRef.current.style.color = rem <= 120 ? '#fbbf24' : 'rgba(255,255,255,0.85)';
       }
 
-      // End-screen gradient mask (hides YouTube's autoplay suggestions)
+      // End-screen gradient mask (hides YouTube's autoplay suggestions) —
+      // only write to DOM when the display state actually changes.
       if (maskEndRef.current && startDuration > 0) {
-        maskEndRef.current.style.display =
-          Math.max(0, startDuration - elapsedSec) <= 25 ? 'block' : 'none';
+        const shouldShow = Math.max(0, startDuration - elapsedSec) <= 25;
+        if (shouldShow !== maskVisible) {
+          maskVisible = shouldShow;
+          maskEndRef.current.style.display = shouldShow ? 'block' : 'none';
+        }
       }
 
-      // Wind-down banner
+      // Wind-down banner — only write to DOM when content changes.
       if (bannerRef.current) {
         const show2min = rem >= 110 && rem <= 130;
         const show30sec = rem >= 25 && rem <= 35;
-        if (show2min || show30sec) {
-          bannerRef.current.style.display = 'block';
-          bannerRef.current.textContent = show2min
-            ? '2 minutes left — this video will finish'
-            : '30 seconds left — this video will finish';
-        } else {
-          bannerRef.current.style.display = 'none';
+        const newText = show2min
+          ? '2 minutes left — this video will finish'
+          : show30sec
+          ? '30 seconds left — this video will finish'
+          : '';
+        if (newText !== bannerText) {
+          bannerText = newText;
+          bannerRef.current.style.display = newText ? 'block' : 'none';
+          bannerRef.current.textContent = newText;
         }
       }
     };
 
-    // Schedule DOM mutations at the next animation frame so they are
-    // committed at vsync, preventing mid-frame compositor invalidation.
-    const scheduledTick = () => {
-      rafId = requestAnimationFrame(() => tick());
-    };
-
-    scheduledTick(); // set initial state immediately
-    const id = window.setInterval(scheduledTick, 1000);
-    return () => {
-      clearInterval(id);
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
+    tick(); // set initial state immediately
+    const id = window.setInterval(tick, 1000);
+    return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once at mount — all values captured from render-time props
 
@@ -327,75 +331,93 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
         src={src}
         style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none',
-          // Keep the video on its own GPU compositing layer so that style
-          // mutations on the overlay elements (timer, banner) do not
-          // invalidate the video layer and cause dropped frames.
+          // Keep the video on its own GPU compositing layer so that overlay
+          // mutations do not invalidate the video layer and cause dropped frames.
           willChange: 'transform',
         }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
         title="YouTube video"
       />
-      {/* End-screen gradient mask — hidden by default, shown via direct DOM */}
+      {/* Single GPU compositing layer for ALL overlay elements.
+          willChange: transform + contain: strict promotes this container to its
+          own GPU texture, separate from the video layer. Any DOM mutation inside
+          (timer text, banner visibility) only repaints this one layer and cannot
+          stall or invalidate the video compositor — the critical fix for
+          fast-motion animated content where the hardware decoder leaves no slack
+          for extra compositor work on individual overlay layers. */}
       <div
-        ref={maskEndRef}
-        aria-hidden
         style={{
-          display: 'none',
-          position: 'absolute', right: 0, bottom: 0, width: '32%', height: '70%',
-          background: 'linear-gradient(to top left, rgba(0,0,0,0.85), rgba(0,0,0,0))',
-          pointerEvents: 'auto', zIndex: 50,
-        }}
-        onClick={(e) => e.preventDefault()}
-      />
-      {/* Transparent click-shield over YouTube's top bar (title + channel chip)
-          so taps there don't open YouTube — without hiding any video pixels. */}
-      <div aria-hidden style={{
-        position: 'absolute', left: 0, right: 0, top: 0,
-        height: 80,
-        background: 'transparent',
-        pointerEvents: 'auto', zIndex: 49,
-      }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
-      {/* Transparent click-shield over the bottom region — covers YouTube's
-          control bar and "More videos" rail. Kept under 40% to avoid forcing
-          a large transparent compositing layer over the video on slower TVs. */}
-      <div aria-hidden style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0,
-        height: '35%',
-        background: 'transparent',
-        pointerEvents: 'auto', zIndex: 49,
-      }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
-      {/* Budget countdown — corner badge, updated every second via direct DOM */}
-      <span
-        ref={budgetTimerRef}
-        className="tabular"
-        aria-label="Budget remaining"
-        style={{
-          position: 'absolute', top: 16, left: 16,
-          background: 'rgba(0,0,0,0.60)',
-          padding: '6px 16px', borderRadius: 999,
-          fontSize: 20, fontWeight: 700, zIndex: 60,
+          position: 'absolute', inset: 0,
           pointerEvents: 'none',
-          color: 'rgba(255,255,255,0.85)',
+          willChange: 'transform',
+          transform: 'translateZ(0)',
+          contain: 'strict',
+          zIndex: 1,
         }}
-      />
-      {/* Wind-down banner — shown/hidden via direct DOM, zero React re-renders */}
-      <div
-        ref={bannerRef}
-        role="status"
-        style={{
-          display: 'none',
-          position: 'fixed',
-          top: 0, left: 0, right: 0,
-          background: 'rgba(15,15,15,0.92)',
-          borderLeft: '8px solid var(--warn)',
-          padding: 'var(--space-3) var(--space-6)',
-          fontSize: 28,
-          fontWeight: 600,
-          color: 'var(--text)',
-          zIndex: 200,
-        }}
-      />
+      >
+        {/* End-screen gradient mask — hidden by default, shown via direct DOM */}
+        <div
+          ref={maskEndRef}
+          aria-hidden
+          style={{
+            display: 'none',
+            position: 'absolute', right: 0, bottom: 0, width: '32%', height: '70%',
+            background: 'linear-gradient(to top left, rgba(0,0,0,0.85), rgba(0,0,0,0))',
+            pointerEvents: 'auto', zIndex: 50,
+          }}
+          onClick={(e) => e.preventDefault()}
+        />
+        {/* Transparent click-shield over YouTube's top bar (title + channel chip)
+            so taps there don't open YouTube — without hiding any video pixels. */}
+        <div aria-hidden style={{
+          position: 'absolute', left: 0, right: 0, top: 0,
+          height: 80,
+          background: 'transparent',
+          pointerEvents: 'auto', zIndex: 49,
+        }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
+        {/* Transparent click-shield over the bottom region — covers YouTube's
+            control bar and "More videos" rail. */}
+        <div aria-hidden style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          height: '35%',
+          background: 'transparent',
+          pointerEvents: 'auto', zIndex: 49,
+        }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />
+        {/* Budget countdown — corner badge, updated every second via direct DOM */}
+        <span
+          ref={budgetTimerRef}
+          className="tabular"
+          aria-label="Budget remaining"
+          style={{
+            position: 'absolute', top: 16, left: 16,
+            background: 'rgba(0,0,0,0.60)',
+            padding: '6px 16px', borderRadius: 999,
+            fontSize: 20, fontWeight: 700, zIndex: 60,
+            pointerEvents: 'none',
+            color: 'rgba(255,255,255,0.85)',
+          }}
+        />
+        {/* Wind-down banner — shown/hidden via direct DOM, zero React re-renders.
+            position: absolute is correct here: the overlay container is full-screen
+            (inset: 0) so absolute top:0 is identical to fixed top:0. */}
+        <div
+          ref={bannerRef}
+          role="status"
+          style={{
+            display: 'none',
+            position: 'absolute',
+            top: 0, left: 0, right: 0,
+            background: 'rgba(15,15,15,0.92)',
+            borderLeft: '8px solid var(--warn)',
+            padding: 'var(--space-3) var(--space-6)',
+            fontSize: 28,
+            fontWeight: 600,
+            color: 'var(--text)',
+            zIndex: 200,
+          }}
+        />
+      </div>
     </div>
   );
 }
