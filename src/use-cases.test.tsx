@@ -486,6 +486,41 @@ describe('UC7: As a child, I want a "5 minutes left" audio + visual warning so I
     expect(() => rerender(<FiveMinuteWarning trigger={1} />)).not.toThrow();
     Object.defineProperty(window, 'speechSynthesis', { value: original, configurable: true });
   });
+
+  it('fires immediately mid-video when rendered alongside the player (regression: was deferred until home screen)', () => {
+    // Regression test for issue #7: FiveMinuteWarning was suppressed on the
+    // player route, so the warning only appeared after the video ended and the
+    // user returned home. App.tsx now renders FiveMinuteWarning on all routes.
+    // This test simulates that by rendering FiveMinuteWarning in the same tree
+    // as PlayerScreen and verifying the alert appears the moment trigger fires.
+    const budget = makeBudget({ remaining: 280, fiveMinuteWarning: 0 });
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/play/testVid?d=300']}>
+        <>
+          <FiveMinuteWarning trigger={budget.fiveMinuteWarning} />
+          <Routes>
+            <Route path="/play/:videoId" element={<PlayerScreen budgetCtl={budget} />} />
+          </Routes>
+        </>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    // Simulate the budget ticking past 5 minutes — trigger increments.
+    budget.fiveMinuteWarning = 1;
+    rerender(
+      <MemoryRouter initialEntries={['/play/testVid?d=300']}>
+        <>
+          <FiveMinuteWarning trigger={budget.fiveMinuteWarning} />
+          <Routes>
+            <Route path="/play/:videoId" element={<PlayerScreen budgetCtl={budget} />} />
+          </Routes>
+        </>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/5 minutes left/i)).toBeInTheDocument();
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════
