@@ -175,6 +175,7 @@ function TizenPlayer({ videoId, title, knownDuration, budgetCtl }: TizenPlayerPr
 const YT_ENDED = 0;
 const YT_PLAYING = 1;
 const YT_PAUSED = 2;
+const YT_BUFFERING = 3;
 
 interface WebPlayerProps {
   videoId: string;
@@ -193,7 +194,9 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
   const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    budgetCtl.startTicking();
+    // Do NOT start ticking on mount — budget only drains during actual playback.
+    // The YT_PLAYING message handler calls startTicking() when the video plays.
+    // This prevents budget drain during initial buffering and mid-video buffering.
     return () => budgetCtl.stopTicking();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
@@ -225,6 +228,7 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
         const state: number | undefined = data?.info?.playerState ?? data?.playerState;
         if (state === YT_PLAYING) budgetCtl.startTicking();
         else if (state === YT_PAUSED) budgetCtl.stopTicking(); // mid-video — do NOT consume sub-2-min remainder
+        else if (state === YT_BUFFERING) budgetCtl.stopTicking(); // buffering — pause timer, do NOT consume sub-2-min remainder
         else if (state === YT_ENDED) {
           // Video completed naturally. Consume any sub-2-min budget leftover
           // before navigating so the child isn't stranded with unusable seconds.

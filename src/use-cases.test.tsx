@@ -21,6 +21,7 @@
  * UC18 – Full D-pad navigation
  * UC19 – Tizen TV playback via native YouTube app
  * UC20 – 7-day watch history summary
+ * UC21 – Timer pauses during video buffering
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
@@ -426,9 +427,21 @@ describe('UC6: As a child, I want a live budget countdown so I know when my sess
     expect(screen.queryByLabelText(/budget remaining/i)).toBeNull();
   });
 
-  it('startTicking is called when the player mounts so the clock ticks', () => {
+  it('startTicking is called when YT_PLAYING fires — clock only ticks during actual playback', () => {
+    // UC21: timer must not start on mount (buffering). Only YT_PLAYING (state=1) starts the clock.
     const budget = makeBudget();
     renderPlayer('vid6b', budget);
+    expect(budget.startTicking).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 1 } }),
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+
     expect(budget.startTicking).toHaveBeenCalledTimes(1);
   });
 
@@ -1204,5 +1217,116 @@ describe('UC20: As a parent, I want a 7-day watch history summary in Settings', 
     });
     expect(() => clearRecent()).not.toThrow();
     spy.mockRestore();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// UC21: As a child, I want the budget timer to pause while the video buffers
+// ══════════════════════════════════════════════════════════════════════════
+
+describe('UC21: As a child, I want the budget timer to pause while the video is buffering so I don\'t lose screen time waiting for the video to load', () => {
+  it('does NOT start the timer on mount — budget only drains during actual playback', () => {
+    const budget = makeBudget();
+    renderPlayer('ucBuf1', budget);
+    expect(budget.startTicking).not.toHaveBeenCalled();
+  });
+
+  it('starts the timer when YT_PLAYING (state=1) fires — video is actually playing', () => {
+    const budget = makeBudget();
+    renderPlayer('ucBuf2', budget);
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 1 } }),
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+
+    expect(budget.startTicking).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops the timer when YT_BUFFERING (state=3) fires — video is buffering mid-playback', () => {
+    const budget = makeBudget();
+    renderPlayer('ucBuf3', budget);
+    vi.mocked(budget.stopTicking).mockClear();
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 3 } }),
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+
+    expect(budget.stopTicking).toHaveBeenCalledTimes(1);
+    // Must NOT consume sub-2-min budget during buffering (it's not the end of the session).
+    expect(budget.stopTicking).toHaveBeenCalledWith();
+  });
+
+  it('resumes the timer when YT_PLAYING fires after a buffering pause', () => {
+    const budget = makeBudget();
+    renderPlayer('ucBuf4', budget);
+
+    // First: video plays
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 1 } }),
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+    expect(budget.startTicking).toHaveBeenCalledTimes(1);
+
+    vi.mocked(budget.startTicking).mockClear();
+
+    // Then: buffering kicks in
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 3 } }),
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+    expect(budget.stopTicking).toHaveBeenCalled();
+
+    vi.mocked(budget.stopTicking).mockClear();
+
+    // Finally: video resumes playing
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ info: { playerState: 1 } }),
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+    expect(budget.startTicking).toHaveBeenCalledTimes(1);
+  });
+
+  it('stopTicking called during buffering does NOT pass consumeIfLow=true — no sub-2-minute remaining budget consumed', () => {
+    // Exception handling: buffering must not be treated as session end.
+    // Passing consumeIfLow=true would consume the sub-2-min leftover and kick
+    // the child home even though they have time remaining.
+    const budget = makeBudget();
+    renderPlayer('ucBuf5', budget);
+    vi.mocked(budget.stopTicking).mockClear();
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ playerState: 3 }), // alternate payload shape
+          origin: 'https://www.youtube-nocookie.com',
+        }),
+      );
+    });
+
+    if (vi.mocked(budget.stopTicking).mock.calls.length > 0) {
+      expect(budget.stopTicking).not.toHaveBeenCalledWith(true);
+    }
   });
 });

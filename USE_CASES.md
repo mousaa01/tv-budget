@@ -22,3 +22,4 @@
 | UC18 | Child  | As a child, I want full D-pad navigation so I never need a mouse or keyboard. |
 | UC19 | Child  | As a child on Tizen TV, I want playback via the native YouTube app for best quality. |
 | UC20 | Parent | As a parent, I want a 7-day watch history summary in Settings. |
+| UC21 | Child  | As a child, I want the budget timer to pause while the video is buffering so I don't lose screen time waiting for the video to load. |
