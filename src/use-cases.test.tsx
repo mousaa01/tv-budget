@@ -380,10 +380,10 @@ describe('UC5: As a child, I want full-screen video playback on the TV during my
     expect(iframe.src).toContain('abc123');
   });
 
-  it('iframe uses the youtube-nocookie.com domain for privacy', () => {
+  it('iframe uses the youtube.com domain', () => {
     renderPlayer('abc123');
     const iframe = screen.getByTitle('YouTube video') as HTMLIFrameElement;
-    expect(iframe.src).toContain('youtube-nocookie.com');
+    expect(iframe.src).toContain('youtube.com');
   });
 
   it('iframe includes autoplay=1 so the video starts immediately', () => {

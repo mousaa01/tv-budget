@@ -316,7 +316,7 @@ function WebPlayerImpl({ videoId, knownDuration, budgetCtl }: WebPlayerProps) {
 
   const origin = window.location.origin || 'https://tv-budget.vercel.app';
   const src =
-    `https://www.youtube-nocookie.com/embed/${videoId}` +
+    `https://www.youtube.com/embed/${videoId}` +
     `?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&fs=0&controls=1&playsinline=1` +
     `&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
 
@@ -475,4 +475,3 @@ export function PlayerScreen({ budgetCtl }: PlayerProps) {
     />
   );
 }
-

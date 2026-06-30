@@ -83,10 +83,10 @@ describe('PlayerScreen (web/iframe branch)', () => {
     expect(iframe.src).toContain('dQw4w9WgXcQ');
   });
 
-  it('iframe src uses youtube-nocookie.com', () => {
+  it('iframe src uses youtube.com', () => {
     renderPlayer('abc123');
     const iframe = screen.getByTitle('YouTube video') as HTMLIFrameElement;
-    expect(iframe.src).toContain('youtube-nocookie.com/embed/abc123');
+    expect(iframe.src).toContain('youtube.com/embed/abc123');
   });
 
   it('iframe src includes autoplay=1', () => {
